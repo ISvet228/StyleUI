@@ -110,8 +110,8 @@ public class StyledComboBox extends AnimatedComponent {
     private double popupAnimation;
     private Timer popupTimer;
 
-    public StyledComboBox(Style style) { this(style, new Object[0]); }
-    public StyledComboBox(Style style, Object[] values) {
+    public StyledComboBox(Style style, Object[] values, int referenceWidth, int referenceHeight) {
+        super(referenceWidth, referenceHeight);
         this.style = style;
 
         if (values != null) Collections.addAll(items, values);

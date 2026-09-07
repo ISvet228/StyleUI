@@ -12,7 +12,8 @@ public class StyledButton extends AnimatedComponent {
     private Style style;
     private final String text;
     private final List<ActionListener> listeners = new ArrayList<>();
-    public StyledButton(Style style, String text) {
+    public StyledButton(Style style, String text, int referenceWidth, int referenceHeight) {
+        super(referenceWidth, referenceHeight);
         this.style = style;
         this.text = text;
         setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));

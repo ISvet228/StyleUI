@@ -9,7 +9,8 @@ public class StyledLabel extends AnimatedComponent {
     private double reflectionPhase;
     private Timer reflectionTimer;
 
-    public StyledLabel(Style style, String text) {
+    public StyledLabel(Style style, String text, int referenceWidth, int referenceHeight) {
+        super(referenceWidth, referenceHeight);
         this.style = style;
         this.text = text;
         setOpaque(false);

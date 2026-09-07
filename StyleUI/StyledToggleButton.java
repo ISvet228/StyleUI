@@ -6,11 +6,12 @@ import java.awt.event.MouseEvent;
 import java.awt.geom.Point2D;
 import java.awt.geom.RoundRectangle2D;
 
-public abstract class AnimatedComponent extends JComponent {
-    protected double animation;
-    protected double reflectionPhase;
-    protected boolean mouseOver;
-    protected boolean mousePressed;
+public class StyledToggleButton extends JToggleButton {
+    private Style style;
+    private double animation;
+    private double reflectionPhase;
+    private boolean mouseOver;
+    private boolean mousePressed;
     private Dimension baseParentSize;
     private final Timer animationTimer;
 
@@ -19,33 +20,53 @@ public abstract class AnimatedComponent extends JComponent {
     private int referenceWidth, referenceHeight;
     private boolean scaling;
 
-    AnimatedComponent(int referenceWidth, int referenceHeight) {
+    public StyledToggleButton(Style style, String text, int referenceWidth, int referenceHeight) {
+        super(text);
+        this.style = style;
         this.referenceWidth = Math.max(1, referenceWidth);
         this.referenceHeight = Math.max(1, referenceHeight);
         setOpaque(false);
+        setContentAreaFilled(false);
+        setBorderPainted(false);
+        setFocusPainted(false);
+        setRolloverEnabled(false);
+        setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        setPreferredSize(new Dimension(180, 42));
+
         enableEvents(AWTEvent.MOUSE_EVENT_MASK | AWTEvent.MOUSE_MOTION_EVENT_MASK);
+
         animationTimer = new Timer(16, e -> {
-            double target = mouseOver || mousePressed ? 1.0 : 0.0;
+            double target = mouseOver || mousePressed || isSelected() ? 1.0 : 0.0;
             double old = animation;
             animation += (target - animation) * 0.22;
             if (Math.abs(animation - target) < 0.003) animation = target;
-            boolean glass = getStyle() == Style.GLASS;
+            boolean glass = style == Style.GLASS;
             if (glass) reflectionPhase = (reflectionPhase + 0.0035) % 1.0;
             if (old != animation || glass) repaint();
         });
         animationTimer.start();
     }
+
     @Override public void addNotify() {
         super.addNotify();
-        if (animationTimer != null && !animationTimer.isRunning()) animationTimer.start();
+        if (!animationTimer.isRunning()) animationTimer.start();
         SwingUtilities.invokeLater(this::updateScale);
     }
+
     @Override public void removeNotify() {
-        if (animationTimer != null && animationTimer.isRunning()) animationTimer.stop();
+        if (animationTimer.isRunning()) animationTimer.stop();
         super.removeNotify();
     }
-    protected abstract Style getStyle();
-    protected void processMouseEvent(MouseEvent e) {
+
+    protected Style getStyle() { return style; }
+
+    public void setStyle(Style style) {
+        if (style == null || style == this.style) return;
+        this.style = style;
+        repaint();
+    }
+
+    @Override protected void processMouseEvent(MouseEvent e) {
         switch (e.getID()) {
             case MouseEvent.MOUSE_ENTERED -> mouseOver = true;
             case MouseEvent.MOUSE_EXITED -> {
@@ -58,27 +79,32 @@ public abstract class AnimatedComponent extends JComponent {
         super.processMouseEvent(e);
         repaint();
     }
-    protected void processMouseMotionEvent(MouseEvent e) {
+
+    @Override protected void processMouseMotionEvent(MouseEvent e) {
         super.processMouseMotionEvent(e);
         repaint();
     }
+
     protected Graphics2D graphics(Graphics g) {
-        Graphics2D g2d = (Graphics2D)g.create();
+        Graphics2D g2d = (Graphics2D) g.create();
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
         g2d.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
         return g2d;
     }
+
     protected float parentScale() {
         Container parent = getParent();
         if (parent == null || parent.getWidth() <= 0 || parent.getHeight() <= 0) return 1f;
         if (baseParentSize == null || baseParentSize.width <= 0 || baseParentSize.height <= 0) baseParentSize = new Dimension(parent.getWidth(), parent.getHeight());
-        float sx = parent.getWidth() / (float)baseParentSize.width;
-        float sy = parent.getHeight() / (float)baseParentSize.height;
+        float sx = parent.getWidth() / (float) baseParentSize.width;
+        float sy = parent.getHeight() / (float) baseParentSize.height;
         return Math.max(0.1f, Math.min(sx, sy));
     }
+
     protected int scaled(int value) { return Math.max(1, Math.round(value * parentScale())); }
     protected float scaled(float value) { return value * parentScale(); }
+
     protected void resetParentScaleReference() {
         Container parent = getParent();
         if (parent == null) {
@@ -87,33 +113,87 @@ public abstract class AnimatedComponent extends JComponent {
         }
         baseParentSize = new Dimension(Math.max(1, parent.getWidth()), Math.max(1, parent.getHeight()));
     }
+
+    @Override protected void paintComponent(Graphics g) {
+        Graphics2D g2d = graphics(g);
+        int w = getWidth(), h = getHeight();
+        if (w <= 0 || h <= 0) {
+            g2d.dispose();
+            return;
+        }
+
+        int inset = Math.max(1, Math.round(Math.min(w, h) * 0.025f));
+        int x = inset, y = inset;
+        int bw = Math.max(1, w - inset * 2);
+        int bh = Math.max(1, h - inset * 2);
+
+        if (mousePressed) {
+            int press = scaled(2);
+            x += press;
+            y += press;
+        }
+
+        Color fill = mix(style.normal, style.hover, (float) animation);
+        if (style == Style.GLASS) fill = new Color(255, 255, 255, Math.round(22 + 35 * (float) animation));
+
+        float arc = Math.clamp(Math.min(bw, bh) * 0.22f, scaled(4), scaled(24));
+
+        g2d.setColor(fill);
+        g2d.fillRoundRect(x, y, bw, bh, Math.round(arc), Math.round(arc));
+
+        g2d.setColor(style.accent);
+        g2d.drawRoundRect(x, y, bw - 1, bh - 1, Math.round(arc), Math.round(arc));
+
+        if (style == Style.GLASS) {
+            Graphics2D sheen = (Graphics2D) g2d.create();
+            sheen.translate(x, y);
+            paintGlassSheen(sheen, bw, bh, arc, reflectionPhase);
+            sheen.dispose();
+        }
+
+        drawCenteredText(g2d, getText(), style.text, Math.max(9f, h * 0.34f), x, y, bw, bh);
+        g2d.dispose();
+    }
+
     static void paintGlassSheen(Graphics2D g2d, int w, int h, float arc, double phase) {
         if (w <= 0 || h <= 0) return;
-        Graphics2D gc = (Graphics2D)g2d.create();
+
+        Graphics2D gc = (Graphics2D) g2d.create();
         gc.clip(new RoundRectangle2D.Float(0, 0, w, h, arc, arc));
+
         float band = Math.max(w, h) * 0.5f;
         float span = w + h + band * 2;
-        float start = (float)(phase * span) - band - h;
+        float start = (float) (phase * span) - band - h;
+
         Point2D p1 = new Point2D.Float(start, 0);
         Point2D p2 = new Point2D.Float(start + band, h);
+
         float[] fractions = {0f, 0.5f, 1f};
         Color[] colors = {
                 new Color(255, 255, 255, 0),
                 new Color(255, 255, 255, Math.round(255 * 0.45f)),
-                new Color(255, 255, 255, 0)};
+                new Color(255, 255, 255, 0)
+        };
+
         gc.setPaint(new LinearGradientPaint(p1, p2, fractions, colors, MultipleGradientPaint.CycleMethod.NO_CYCLE));
         gc.fillRoundRect(0, 0, w, h, Math.round(arc), Math.round(arc));
         gc.dispose();
     }
+
     static void drawCenteredText(Graphics2D g2d, String text, Color color, float size, int x, int y, int w, int h) {
+        if (text == null || text.isEmpty()) return;
+
         Font font = new Font("SansSerif", Font.BOLD, Math.max(1, Math.round(size)));
         g2d.setFont(font);
         g2d.setColor(color);
+
         FontMetrics fm = g2d.getFontMetrics(font);
         int ty = y + (h - fm.getHeight()) / 2 + fm.getAscent();
         ty = Math.max(y + fm.getAscent(), Math.min(y + h - Math.max(1, fm.getDescent()), ty));
+
         g2d.drawString(text, x + (w - fm.stringWidth(text)) / 2, ty);
     }
+
     static Color mix(Color a, Color b, float t) {
         t = Math.clamp(t, 0, 1);
         int r = Math.round(a.getRed() + (b.getRed() - a.getRed()) * t);
@@ -122,70 +202,58 @@ public abstract class AnimatedComponent extends JComponent {
         int al = Math.round(a.getAlpha() + (b.getAlpha() - a.getAlpha()) * t);
         return new Color(r, g, bl, al);
     }
+
     @Override public void setBounds(int x, int y, int width, int height) {
-        baseX = x;
-        baseY = y;
-        baseWidth = width;
-        baseHeight = height;
-        updateScale();
+        if (!scaling) {
+            baseX = x;
+            baseY = y;
+            baseWidth = width;
+            baseHeight = height;
+        }
+        super.setBounds(x, y, width, height);
+    }
+
+    @Override public void setBounds(Rectangle r) {
+        if (r == null) return;
+        setBounds(r.x, r.y, r.width, r.height);
     }
 
     public void updateScale() {
         Container parent = getParent();
         if (parent == null) return;
-
-        int width = parent.getWidth();
-        int height = parent.getHeight();
-
-        if (width <= 0 || height <= 0) {
-            super.setBounds(baseX, baseY, baseWidth, baseHeight);
-            return;
-        }
-
-        double scale = Math.min((double)width / referenceWidth, (double)height / referenceHeight);
-
-        int backgroundX = (width - (int)(referenceWidth * scale)) / 2;
-        int backgroundY = (height - (int)(referenceHeight * scale)) / 2;
-
-        int x = backgroundX + (int)(baseX * scale);
-        int y = backgroundY + (int)(baseY * scale);
-        int w = (int)(baseWidth * scale);
-        int h = (int)(baseHeight * scale);
-
-        scaling = true;
-        super.setBounds(x, y, w, h);
-        scaling = false;
+        updateScale(parent.getWidth(), parent.getHeight());
     }
+
     public void updateScale(int parentWidth, int parentHeight) {
         if (baseWidth <= 0 || baseHeight <= 0 || parentWidth <= 0 || parentHeight <= 0) return;
 
-        double scale = Math.min((double)parentWidth / referenceWidth, (double)parentHeight / referenceHeight);
-        int scaledReferenceWidth = (int)Math.round(referenceWidth * scale);
-        int scaledReferenceHeight = (int)Math.round(referenceHeight * scale);
+        double scale = Math.min((double) parentWidth / referenceWidth, (double) parentHeight / referenceHeight);
+        int scaledReferenceWidth = (int) Math.round(referenceWidth * scale);
+        int scaledReferenceHeight = (int) Math.round(referenceHeight * scale);
         int offsetX = (parentWidth - scaledReferenceWidth) / 2;
         int offsetY = (parentHeight - scaledReferenceHeight) / 2;
 
-        int x = offsetX + (int)Math.round(baseX * scale);
-        int y = offsetY + (int)Math.round(baseY * scale);
-        int width = Math.max(1, (int)Math.round(baseWidth * scale));
-        int height = Math.max(1, (int)Math.round(baseHeight * scale));
+        int x = offsetX + (int) Math.round(baseX * scale);
+        int y = offsetY + (int) Math.round(baseY * scale);
+        int width = Math.max(1, (int) Math.round(baseWidth * scale));
+        int height = Math.max(1, (int) Math.round(baseHeight * scale));
 
         scaling = true;
         super.setBounds(x, y, width, height);
         scaling = false;
     }
+
     public void setReferenceSize(int width, int height) {
         referenceWidth = Math.max(1, width);
         referenceHeight = Math.max(1, height);
         updateScale();
     }
+
     public int getReferenceWidth() { return referenceWidth; }
     public int getReferenceHeight() { return referenceHeight; }
     public int getBaseX() { return baseX; }
     public int getBaseY() { return baseY; }
     public int getBaseWidth() { return baseWidth; }
     public int getBaseHeight() { return baseHeight; }
-    public Rectangle getBaseBounds() {
-        return new Rectangle(baseX, baseY, baseWidth, baseHeight);
-    }
+    public Rectangle getBaseBounds() { return new Rectangle(baseX, baseY, baseWidth, baseHeight); }
 }

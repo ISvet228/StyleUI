@@ -14,7 +14,8 @@ public  class StyledToggle extends AnimatedComponent {
     private boolean selected;
     private final List<ActionListener> listeners = new ArrayList<>();
 
-    public StyledToggle(Style style, String text) {
+    public StyledToggle(Style style, String text, int referenceWidth, int referenceHeight) {
+        super(referenceWidth, referenceHeight);
         this.style = style;
         this.text = text;
         setPreferredSize(new Dimension(180, 34));
