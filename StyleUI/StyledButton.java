@@ -12,8 +12,8 @@ public class StyledButton extends AnimatedComponent {
     private Style style;
     private final String text;
     private final List<ActionListener> listeners = new ArrayList<>();
-    public StyledButton(Style style, String text, int referenceWidth, int referenceHeight) {
-        super(referenceWidth, referenceHeight);
+    public StyledButton(Style style, String text) {
+        super();
         this.style = style;
         this.text = text;
         setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -25,6 +25,10 @@ public class StyledButton extends AnimatedComponent {
                 for (ActionListener listener : listeners) listener.actionPerformed(event); }});
     }
     public void addActionListener(ActionListener listener) { if (listener != null) listeners.add(listener); }
+    public StyledButton(Style style, String text, int referenceWidth, int referenceHeight) {
+        this(style, text);
+        setReferenceSize(referenceWidth, referenceHeight);
+    }
     protected Style getStyle() { return style; }
     public void setStyle(Style style) {
         if (style == null || style == this.style) return;

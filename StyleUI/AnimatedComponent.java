@@ -7,21 +7,17 @@ import java.awt.geom.Point2D;
 import java.awt.geom.RoundRectangle2D;
 
 public abstract class AnimatedComponent extends JComponent {
-    protected double animation;
-    protected double reflectionPhase;
-    protected boolean mouseOver;
-    protected boolean mousePressed;
+    protected double animation, reflectionPhase;
+    protected boolean mouseOver, mousePressed;
     private Dimension baseParentSize;
     private final Timer animationTimer;
 
-    private int baseX, baseY;
-    private int baseWidth, baseHeight;
+    private int baseX, baseY, baseWidth, baseHeight;
     private int referenceWidth, referenceHeight;
-    private boolean scaling;
+    private boolean hasReferenceSize, scaling;
 
-    AnimatedComponent(int referenceWidth, int referenceHeight) {
-        this.referenceWidth = Math.max(1, referenceWidth);
-        this.referenceHeight = Math.max(1, referenceHeight);
+    AnimatedComponent() {
+        hasReferenceSize = false;
         setOpaque(false);
         enableEvents(AWTEvent.MOUSE_EVENT_MASK | AWTEvent.MOUSE_MOTION_EVENT_MASK);
         animationTimer = new Timer(16, e -> {
@@ -35,10 +31,17 @@ public abstract class AnimatedComponent extends JComponent {
         });
         animationTimer.start();
     }
+
+    AnimatedComponent(int referenceWidth, int referenceHeight) {
+        this();
+        this.referenceWidth = Math.max(1, referenceWidth);
+        this.referenceHeight = Math.max(1, referenceHeight);
+        hasReferenceSize = true;
+    }
     @Override public void addNotify() {
         super.addNotify();
         if (animationTimer != null && !animationTimer.isRunning()) animationTimer.start();
-        SwingUtilities.invokeLater(this::updateScale);
+        if (hasReferenceSize) SwingUtilities.invokeLater(this::updateScale);
     }
     @Override public void removeNotify() {
         if (animationTimer != null && animationTimer.isRunning()) animationTimer.stop();
@@ -70,6 +73,7 @@ public abstract class AnimatedComponent extends JComponent {
         return g2d;
     }
     protected float parentScale() {
+        if (hasReferenceSize) return 1f;
         Container parent = getParent();
         if (parent == null || parent.getWidth() <= 0 || parent.getHeight() <= 0) return 1f;
         if (baseParentSize == null || baseParentSize.width <= 0 || baseParentSize.height <= 0) baseParentSize = new Dimension(parent.getWidth(), parent.getHeight());
@@ -123,40 +127,47 @@ public abstract class AnimatedComponent extends JComponent {
         return new Color(r, g, bl, al);
     }
     @Override public void setBounds(int x, int y, int width, int height) {
-        baseX = x;
-        baseY = y;
-        baseWidth = width;
-        baseHeight = height;
-        updateScale();
+        if (!hasReferenceSize) {
+            super.setBounds(x, y, width, height);
+            return;
+        }
+        if (!scaling) {
+            baseX = x;
+            baseY = y;
+            baseWidth = width;
+            baseHeight = height;
+            updateScale();
+            return;
+        }
+        super.setBounds(x, y, width, height);
+    }
+
+    @Override public void setBounds(Rectangle r) {
+        if (r == null) return;
+        setBounds(r.x, r.y, r.width, r.height);
     }
 
     public void updateScale() {
-        Container parent = getParent();
-        if (parent == null) return;
-
-        int width = parent.getWidth();
-        int height = parent.getHeight();
-
-        if (width <= 0 || height <= 0) {
-            super.setBounds(baseX, baseY, baseWidth, baseHeight);
+        if (!hasReferenceSize) {
+            resetParentScaleReference();
+            revalidate();
+            repaint();
             return;
         }
-
-        double scale = Math.min((double)width / referenceWidth, (double)height / referenceHeight);
-
-        int backgroundX = (width - (int)(referenceWidth * scale)) / 2;
-        int backgroundY = (height - (int)(referenceHeight * scale)) / 2;
-
-        int x = backgroundX + (int)(baseX * scale);
-        int y = backgroundY + (int)(baseY * scale);
-        int w = (int)(baseWidth * scale);
-        int h = (int)(baseHeight * scale);
-
-        scaling = true;
-        super.setBounds(x, y, w, h);
-        scaling = false;
+        Container parent = getParent();
+        if (parent == null) return;
+        updateScale(parent.getWidth(), parent.getHeight());
     }
+
     public void updateScale(int parentWidth, int parentHeight) {
+        if (!hasReferenceSize) {
+            if (parentWidth > 0 && parentHeight > 0) {
+                baseParentSize = new Dimension(parentWidth, parentHeight);
+                revalidate();
+                repaint();
+            }
+            return;
+        }
         if (baseWidth <= 0 || baseHeight <= 0 || parentWidth <= 0 || parentHeight <= 0) return;
 
         double scale = Math.min((double)parentWidth / referenceWidth, (double)parentHeight / referenceHeight);
@@ -174,18 +185,20 @@ public abstract class AnimatedComponent extends JComponent {
         super.setBounds(x, y, width, height);
         scaling = false;
     }
+
     public void setReferenceSize(int width, int height) {
         referenceWidth = Math.max(1, width);
         referenceHeight = Math.max(1, height);
+        hasReferenceSize = true;
         updateScale();
     }
+
+    public boolean hasReferenceSize() { return hasReferenceSize; }
     public int getReferenceWidth() { return referenceWidth; }
     public int getReferenceHeight() { return referenceHeight; }
     public int getBaseX() { return baseX; }
     public int getBaseY() { return baseY; }
     public int getBaseWidth() { return baseWidth; }
     public int getBaseHeight() { return baseHeight; }
-    public Rectangle getBaseBounds() {
-        return new Rectangle(baseX, baseY, baseWidth, baseHeight);
-    }
+    public Rectangle getBaseBounds() { return new Rectangle(baseX, baseY, baseWidth, baseHeight); }
 }

@@ -13,15 +13,15 @@ public class StyledTextField extends JTextField {
 
     private int baseX, baseY, baseWidth, baseHeight;
     private int referenceWidth, referenceHeight;
+    private boolean hasReferenceSize;
     private boolean scaling;
 
     private final Timer reflectionTimer;
 
-    public StyledTextField(Style style, String text, int referenceWidth, int referenceHeight) {
+    public StyledTextField(Style style, String text) {
         super(text);
         this.style = style;
-        this.referenceWidth = Math.max(1, referenceWidth);
-        this.referenceHeight = Math.max(1, referenceHeight);
+        hasReferenceSize = false;
 
         setForeground(style.text);
         setCaretColor(style.text);
@@ -47,10 +47,15 @@ public class StyledTextField extends JTextField {
         updateFont();
     }
 
+    public StyledTextField(Style style, String text, int referenceWidth, int referenceHeight) {
+        this(style, text);
+        setReferenceSize(referenceWidth, referenceHeight);
+    }
+
     @Override public void addNotify() {
         super.addNotify();
         if (reflectionTimer != null && !reflectionTimer.isRunning()) reflectionTimer.start();
-        SwingUtilities.invokeLater(this::updateScale);
+        if (hasReferenceSize) SwingUtilities.invokeLater(this::updateScale);
     }
 
     @Override public void removeNotify() {
@@ -59,17 +64,17 @@ public class StyledTextField extends JTextField {
     }
 
     @Override public void setBounds(int x, int y, int width, int height) {
+        if (!hasReferenceSize) {
+            super.setBounds(x, y, width, height);
+            return;
+        }
         if (!scaling) {
             baseX = x;
             baseY = y;
             baseWidth = width;
             baseHeight = height;
-
-            Container parent = getParent();
-            if (parent != null && parent.getWidth() > 0 && parent.getHeight() > 0) {
-                updateScale(parent.getWidth(), parent.getHeight());
-                return;
-            }
+            updateScale();
+            return;
         }
         super.setBounds(x, y, width, height);
     }
@@ -80,12 +85,20 @@ public class StyledTextField extends JTextField {
     }
 
     public void updateScale() {
+        if (!hasReferenceSize) {
+            repaint();
+            return;
+        }
         Container parent = getParent();
         if (parent == null) return;
         updateScale(parent.getWidth(), parent.getHeight());
     }
 
     public void updateScale(int parentWidth, int parentHeight) {
+        if (!hasReferenceSize) {
+            repaint();
+            return;
+        }
         if (baseWidth <= 0 || baseHeight <= 0 || parentWidth <= 0 || parentHeight <= 0) return;
 
         double scale = Math.min((double)parentWidth / referenceWidth, (double)parentHeight / referenceHeight);
@@ -107,9 +120,11 @@ public class StyledTextField extends JTextField {
     public void setReferenceSize(int width, int height) {
         referenceWidth = Math.max(1, width);
         referenceHeight = Math.max(1, height);
+        hasReferenceSize = true;
         updateScale();
     }
 
+    public boolean hasReferenceSize() { return hasReferenceSize; }
     public int getReferenceWidth() { return referenceWidth; }
     public int getReferenceHeight() { return referenceHeight; }
     public int getBaseX() { return baseX; }

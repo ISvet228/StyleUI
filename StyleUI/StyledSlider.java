@@ -28,9 +28,12 @@ public class StyledSlider extends AnimatedComponent {
     private Hashtable<Integer, JLabel> labelTable;
     private final java.util.List<ChangeListener> listeners = new ArrayList<>();
 
-    public StyledSlider(Style style, int referenceWidth, int referenceHeight) {
-        super(referenceWidth, referenceHeight);
+    public StyledSlider(Style style, int minimum, int maximum, int value) {
+        super();
         this.style = style;
+        this.minimum = minimum;
+        this.maximum = maximum;
+        this.value = value;
         filledTrackColor = style.accent;
         thumbColor = tickColor = style.text;
         setFocusable(true);
@@ -69,6 +72,10 @@ public class StyledSlider extends AnimatedComponent {
                 }
             }
         });
+    }
+    public StyledSlider(Style style, int minimum, int maximum, int value, int referenceWidth, int referenceHeight) {
+        this(style, minimum, maximum,  value);
+        setReferenceSize(referenceWidth, referenceHeight);
     }
     protected Style getStyle() { return style; }
     public void setStyle(Style style) {

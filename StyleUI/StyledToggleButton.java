@@ -8,23 +8,32 @@ import java.awt.geom.RoundRectangle2D;
 
 public class StyledToggleButton extends JToggleButton {
     private Style style;
-    private double animation;
-    private double reflectionPhase;
-    private boolean mouseOver;
-    private boolean mousePressed;
+    private double animation, reflectionPhase;
+    private boolean mouseOver, mousePressed;
     private Dimension baseParentSize;
-    private final Timer animationTimer;
+    private Timer animationTimer;
 
     private int baseX, baseY;
     private int baseWidth, baseHeight;
     private int referenceWidth, referenceHeight;
     private boolean scaling;
+    private boolean referenceScaling;
 
+    public StyledToggleButton(Style style, String text) {
+        super(text);
+        this.style = style;
+        this.referenceScaling = false;
+        initialize();
+    }
     public StyledToggleButton(Style style, String text, int referenceWidth, int referenceHeight) {
         super(text);
         this.style = style;
         this.referenceWidth = Math.max(1, referenceWidth);
         this.referenceHeight = Math.max(1, referenceHeight);
+        this.referenceScaling = true;
+        initialize();
+    }
+    private void initialize() {
         setOpaque(false);
         setContentAreaFilled(false);
         setBorderPainted(false);
@@ -158,15 +167,11 @@ public class StyledToggleButton extends JToggleButton {
     static void paintGlassSheen(Graphics2D g2d, int w, int h, float arc, double phase) {
         if (w <= 0 || h <= 0) return;
 
-        Graphics2D gc = (Graphics2D) g2d.create();
-        gc.clip(new RoundRectangle2D.Float(0, 0, w, h, arc, arc));
+        Graphics2D g2dc = (Graphics2D) g2d.create();
+        g2dc.clip(new RoundRectangle2D.Float(0, 0, w, h, arc, arc));
 
         float band = Math.max(w, h) * 0.5f;
-        float span = w + h + band * 2;
-        float start = (float) (phase * span) - band - h;
-
-        Point2D p1 = new Point2D.Float(start, 0);
-        Point2D p2 = new Point2D.Float(start + band, h);
+        float start = (float) (phase * w + h + band * 2) - band - h;
 
         float[] fractions = {0f, 0.5f, 1f};
         Color[] colors = {
@@ -175,9 +180,9 @@ public class StyledToggleButton extends JToggleButton {
                 new Color(255, 255, 255, 0)
         };
 
-        gc.setPaint(new LinearGradientPaint(p1, p2, fractions, colors, MultipleGradientPaint.CycleMethod.NO_CYCLE));
-        gc.fillRoundRect(0, 0, w, h, Math.round(arc), Math.round(arc));
-        gc.dispose();
+        g2dc.setPaint(new LinearGradientPaint((new Point2D.Float(start, 0)), (new Point2D.Float(start + band, h)), fractions, colors, MultipleGradientPaint.CycleMethod.NO_CYCLE));
+        g2dc.fillRoundRect(0, 0, w, h, Math.round(arc), Math.round(arc));
+        g2dc.dispose();
     }
 
     static void drawCenteredText(Graphics2D g2d, String text, Color color, float size, int x, int y, int w, int h) {
@@ -227,27 +232,39 @@ public class StyledToggleButton extends JToggleButton {
     public void updateScale(int parentWidth, int parentHeight) {
         if (baseWidth <= 0 || baseHeight <= 0 || parentWidth <= 0 || parentHeight <= 0) return;
 
-        double scale = Math.min((double) parentWidth / referenceWidth, (double) parentHeight / referenceHeight);
-        int scaledReferenceWidth = (int) Math.round(referenceWidth * scale);
-        int scaledReferenceHeight = (int) Math.round(referenceHeight * scale);
-        int offsetX = (parentWidth - scaledReferenceWidth) / 2;
-        int offsetY = (parentHeight - scaledReferenceHeight) / 2;
+        double scale;
+        int offsetX = 0;
+        int offsetY = 0;
 
-        int x = offsetX + (int) Math.round(baseX * scale);
-        int y = offsetY + (int) Math.round(baseY * scale);
-        int width = Math.max(1, (int) Math.round(baseWidth * scale));
-        int height = Math.max(1, (int) Math.round(baseHeight * scale));
+        if (referenceScaling) {
+            scale = Math.min((double) parentWidth / referenceWidth, (double) parentHeight / referenceHeight);
+            offsetX = (parentWidth - (int) Math.round(referenceWidth * scale)) / 2;
+            offsetY = (parentHeight - (int) Math.round(referenceHeight * scale)) / 2;
+        } else {
+            if (baseParentSize == null || baseParentSize.width <= 0 || baseParentSize.height <= 0) baseParentSize = new Dimension(parentWidth, parentHeight);
+            scale = Math.min((double) parentWidth / baseParentSize.width, (double) parentHeight / baseParentSize.height);
+        }
 
         scaling = true;
-        super.setBounds(x, y, width, height);
+        super.setBounds(offsetX + (int) Math.round(baseX * scale), offsetY + (int) Math.round(baseY * scale),
+                Math.max(1, (int) Math.round(baseWidth * scale)), Math.max(1, (int) Math.round(baseHeight * scale)));
         scaling = false;
     }
 
     public void setReferenceSize(int width, int height) {
         referenceWidth = Math.max(1, width);
         referenceHeight = Math.max(1, height);
+        referenceScaling = true;
         updateScale();
     }
+
+    public void clearReferenceSize() {
+        referenceScaling = false;
+        resetParentScaleReference();
+        updateScale();
+    }
+
+    public boolean hasReferenceSize() { return referenceScaling; }
 
     public int getReferenceWidth() { return referenceWidth; }
     public int getReferenceHeight() { return referenceHeight; }

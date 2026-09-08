@@ -34,15 +34,15 @@ public class Animated3DText extends JComponent {
 
     private int baseX, baseY, baseWidth, baseHeight;
     private int referenceWidth, referenceHeight;
+    private boolean hasReferenceSize;
     private boolean scaling;
 
     private final Timer timer;
     private final java.util.List<ActionListener> actionListeners = new ArrayList<>();
 
-    public Animated3DText(String text, int referenceWidth, int referenceHeight) {
+    public Animated3DText(String text) {
         this.text = text == null ? "" : text;
-        this.referenceWidth = Math.max(1, referenceWidth);
-        this.referenceHeight = Math.max(1, referenceHeight);
+        hasReferenceSize = false;
         setOpaque(false);
         setBackground(new Color(0, 0, 0, 0));
 
@@ -51,9 +51,19 @@ public class Animated3DText extends JComponent {
         addMouseListener(new MouseAdapter() { @Override public void mouseClicked(MouseEvent e) { if (SwingUtilities.isLeftMouseButton(e)) fireActionPerformed(); }});
     }
 
-    public Animated3DText(String text, AnimationType animationType, int referenceWidth, int referenceHeight) {
-        this(text, referenceWidth, referenceHeight);
+    public Animated3DText(String text, AnimationType animationType) {
+        this(text);
         setAnimationType(animationType);
+    }
+
+    public Animated3DText(String text, int referenceWidth, int referenceHeight) {
+        this(text);
+        setReferenceSize(referenceWidth, referenceHeight);
+    }
+
+    public Animated3DText(String text, AnimationType animationType, int referenceWidth, int referenceHeight) {
+        this(text, animationType);
+        setReferenceSize(referenceWidth, referenceHeight);
     }
 
     private void updateAnimation() {
@@ -105,7 +115,7 @@ public class Animated3DText extends JComponent {
     @Override public void addNotify() {
         super.addNotify();
         if (!timer.isRunning() && animationSpeed > 0) timer.start();
-        SwingUtilities.invokeLater(this::updateScale);
+        if (hasReferenceSize) SwingUtilities.invokeLater(this::updateScale);
         revalidate();
         repaint();
     }
@@ -116,17 +126,17 @@ public class Animated3DText extends JComponent {
     }
 
     @Override public void setBounds(int x, int y, int width, int height) {
+        if (!hasReferenceSize) {
+            super.setBounds(x, y, width, height);
+            return;
+        }
         if (!scaling) {
             baseX = x;
             baseY = y;
             baseWidth = width;
             baseHeight = height;
-
-            Container parent = getParent();
-            if (parent != null && parent.getWidth() > 0 && parent.getHeight() > 0) {
-                updateScale(parent.getWidth(), parent.getHeight());
-                return;
-            }
+            updateScale();
+            return;
         }
         super.setBounds(x, y, width, height);
     }
@@ -137,12 +147,20 @@ public class Animated3DText extends JComponent {
     }
 
     public void updateScale() {
+        if (!hasReferenceSize) {
+            repaint();
+            return;
+        }
         Container parent = getParent();
         if (parent == null) return;
         updateScale(parent.getWidth(), parent.getHeight());
     }
 
     public void updateScale(int parentWidth, int parentHeight) {
+        if (!hasReferenceSize) {
+            repaint();
+            return;
+        }
         if (baseWidth <= 0 || baseHeight <= 0 || parentWidth <= 0 || parentHeight <= 0) return;
 
         double scale = Math.min((double)parentWidth / referenceWidth, (double)parentHeight / referenceHeight);
@@ -164,8 +182,18 @@ public class Animated3DText extends JComponent {
     public void setReferenceSize(int width, int height) {
         referenceWidth = Math.max(1, width);
         referenceHeight = Math.max(1, height);
+        hasReferenceSize = true;
         updateScale();
     }
+
+    public boolean hasReferenceSize() { return hasReferenceSize; }
+    public int getReferenceWidth() { return referenceWidth; }
+    public int getReferenceHeight() { return referenceHeight; }
+    public int getBaseX() { return baseX; }
+    public int getBaseY() { return baseY; }
+    public int getBaseWidth() { return baseWidth; }
+    public int getBaseHeight() { return baseHeight; }
+    public Rectangle getBaseBounds() { return new Rectangle(baseX, baseY, baseWidth, baseHeight); }
 
     @Override protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -374,14 +402,6 @@ public class Animated3DText extends JComponent {
         revalidate();
         repaint();
     }
-
-    public int getReferenceWidth() { return referenceWidth; }
-    public int getReferenceHeight() { return referenceHeight; }
-    public int getBaseX() { return baseX; }
-    public int getBaseY() { return baseY; }
-    public int getBaseWidth() { return baseWidth; }
-    public int getBaseHeight() { return baseHeight; }
-    public Rectangle getBaseBounds() { return new Rectangle(baseX, baseY, baseWidth, baseHeight); }
 
     public void addActionListener(ActionListener listener) { if (listener != null && !actionListeners.contains(listener)) actionListeners.add(listener); }
     public void removeActionListener(ActionListener listener) { actionListeners.remove(listener); }

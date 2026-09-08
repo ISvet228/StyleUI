@@ -8,9 +8,7 @@ public enum Style {
     NEUMORPHIC("02", "NEUMORPHIC", new Color(45, 47, 50), new Color(61, 63, 66),
             new Color(70, 72, 75), new Color(220, 220, 220), new Color(82, 84, 87), new Color(36, 38, 41)),
     GLASS("03", "GLASS", new Color(35, 45, 55), new Color(255, 255, 255, 28),
-            new Color(255, 255, 255, 55), Color.WHITE, new Color(255, 255, 255, 90), new Color(255, 255, 255, 22)),
-    ROYAL("04", "ROYAL", new Color(45, 33, 20), new Color(70, 52, 30),
-            new Color(90, 70, 40), new Color(230, 200, 150), new Color(180, 140, 90), new Color(35, 25, 15));
+            new Color(255, 255, 255, 55), Color.WHITE, new Color(255, 255, 255, 90), new Color(255, 255, 255, 22));
     final String number, title;
     final Color panel, normal, hover, text, accent, field;
     Style(String number, String title, Color panel, Color normal, Color hover, Color text, Color accent, Color field) {

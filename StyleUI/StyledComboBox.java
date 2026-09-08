@@ -69,7 +69,7 @@ public class StyledComboBox extends AnimatedComponent {
 
     private Style style;
 
-    private final java.util.List<Object> items = new ArrayList<>();
+    private final List<Object> items = new ArrayList<>();
     private final List<ActionListener> listeners = new ArrayList<>();
 
     private final ItemStyle itemStyle = new ItemStyle(), popupStyle = new ItemStyle();
@@ -77,13 +77,11 @@ public class StyledComboBox extends AnimatedComponent {
     private int selectedIndex = -1;
 
     private boolean popupVisible, editable;
-    private boolean enabled = true;
-    private boolean lightWeightPopup = true;
+    private boolean enabled = true, lightWeightPopup = true;
 
     private int maximumRowCount = 8;
 
-    private Color backgroundColor, hoverColor, selectedColor, textColor, borderColor, arrowColor;
-    private Color popupBackgroundColor, popupBorderColor;
+    private Color backgroundColor, hoverColor, selectedColor, textColor, borderColor, arrowColor, popupBackgroundColor, popupBorderColor;
 
     private int arc = 12, popupArc = 14;
 
@@ -98,8 +96,7 @@ public class StyledComboBox extends AnimatedComponent {
     private float glassRadius = 0.5f;
 
     private boolean popupGlass;
-    private float popupGlassOpacity = 0.45f;
-    private float popupGlassRadius = 0.5f;
+    private float popupGlassOpacity = 0.45f, popupGlassRadius = 0.5f;
 
     private JTextField editor;
 
@@ -110,8 +107,8 @@ public class StyledComboBox extends AnimatedComponent {
     private double popupAnimation;
     private Timer popupTimer;
 
-    public StyledComboBox(Style style, Object[] values, int referenceWidth, int referenceHeight) {
-        super(referenceWidth, referenceHeight);
+    public StyledComboBox(Style style, Object[] values) {
+        super();
         this.style = style;
 
         if (values != null) Collections.addAll(items, values);
@@ -203,6 +200,10 @@ public class StyledComboBox extends AnimatedComponent {
             }
             repaint();
         });
+    }
+    public StyledComboBox(Style style, Object[] values, int referenceWidth, int referenceHeight) {
+        this(style, values);
+        setReferenceSize(referenceWidth, referenceHeight);
     }
     @Override public void repaint() {
         super.repaint();
