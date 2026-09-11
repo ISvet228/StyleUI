@@ -73,7 +73,7 @@ public class StyledToggleButton extends JToggleButton {
             animation += (target - animation) * 0.22;
             if (Math.abs(animation - target) < 0.003) animation = target;
             boolean glass = style == Style.GLASS;
-            if (glass) reflectionPhase = (reflectionPhase + 0.0035) % 1.0;
+            if (glass) reflectionPhase = AnimationManager.getGlassPhase();
             if (old != animation || glass) repaint();
         };
     }
@@ -178,7 +178,7 @@ public class StyledToggleButton extends JToggleButton {
         if (style == Style.GLASS) {
             Graphics2D sheen = (Graphics2D) g2d.create();
             sheen.translate(x, y);
-            paintGlassSheen(sheen, bw, bh, arc, reflectionPhase);
+            AnimatedComponent.paintGlassSheen(sheen, bw, bh, arc, reflectionPhase);
             sheen.dispose();
         }
 
@@ -186,26 +186,7 @@ public class StyledToggleButton extends JToggleButton {
         g2d.dispose();
     }
 
-    static void paintGlassSheen(Graphics2D g2d, int w, int h, float arc, double phase) {
-        if (w <= 0 || h <= 0) return;
 
-        Graphics2D g2dc = (Graphics2D) g2d.create();
-        g2dc.clip(new RoundRectangle2D.Float(0, 0, w, h, arc, arc));
-
-        float band = Math.max(w, h) * 0.5f;
-        float start = (float) (phase * w + h + band * 2) - band - h;
-
-        float[] fractions = {0f, 0.5f, 1f};
-        Color[] colors = {
-                new Color(255, 255, 255, 0),
-                new Color(255, 255, 255, Math.round(255 * 0.45f)),
-                new Color(255, 255, 255, 0)
-        };
-
-        g2dc.setPaint(new LinearGradientPaint((new Point2D.Float(start, 0)), (new Point2D.Float(start + band, h)), fractions, colors, MultipleGradientPaint.CycleMethod.NO_CYCLE));
-        g2dc.fillRoundRect(0, 0, w, h, Math.round(arc), Math.round(arc));
-        g2dc.dispose();
-    }
 
     static void drawCenteredText(Graphics2D g2d, String text, Color color, float size, int x, int y, int w, int h) {
         if (text == null || text.isEmpty()) return;

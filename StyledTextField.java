@@ -38,7 +38,7 @@ public class StyledTextField extends JTextField {
 
         reflectionTask = () -> {
             if (style == Style.GLASS) {
-                reflectionPhase = (reflectionPhase + 0.0035) % 1.0;
+                reflectionPhase = AnimationManager.getGlassPhase();
                 repaint();
             }
         };
@@ -173,7 +173,7 @@ public class StyledTextField extends JTextField {
         if (style == Style.GLASS) {
             g2d.setColor(new Color(255, 255, 255, 22));
             g2d.fillRoundRect(0, 0, w, h, Math.round(arc), Math.round(arc));
-            paintGlassSheen(g2d, w, h, arc, reflectionPhase);
+            AnimatedComponent.paintGlassSheen(g2d, w, h, arc, reflectionPhase);
             g2d.setColor(new Color(255, 255, 255, 90));
             g2d.drawRoundRect(0, 0, w - 1, h - 1, Math.round(arc), Math.round(arc));
         } else {
@@ -187,27 +187,5 @@ public class StyledTextField extends JTextField {
         super.paintComponent(g);
     }
 
-    static void paintGlassSheen(Graphics2D g2d, int w, int h, float arc, double phase) {
-        if (w <= 0 || h <= 0) return;
 
-        Graphics2D gc = (Graphics2D)g2d.create();
-        gc.clip(new RoundRectangle2D.Float(0, 0, w, h, arc, arc));
-
-        float band = Math.max(w, h) * 0.5f;
-        float span = w + h + band * 2;
-        float start = (float)(phase * span) - band - h;
-
-        Point2D p1 = new Point2D.Float(start, 0);
-        Point2D p2 = new Point2D.Float(start + band, h);
-
-        float[] fractions = {0f, 0.5f, 1f};
-        Color[] colors = {
-                new Color(255, 255, 255, 0),
-                new Color(255, 255, 255, Math.round(255 * 0.45f)),
-                new Color(255, 255, 255, 0)};
-
-        gc.setPaint(new LinearGradientPaint(p1, p2, fractions, colors, MultipleGradientPaint.CycleMethod.NO_CYCLE));
-        gc.fillRoundRect(0, 0, w, h, Math.round(arc), Math.round(arc));
-        gc.dispose();
-    }
 }

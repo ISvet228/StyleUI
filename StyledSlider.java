@@ -55,10 +55,6 @@ public class StyledSlider extends AnimatedComponent {
         });
         addMouseMotionListener(new MouseMotionAdapter() {
             @Override public void mouseDragged(MouseEvent e) {if (!dragging || !enabled) return;updateValue(e.getX(), e.getY()); }});
-        addMouseWheelListener(e -> {
-            if (!enabled) return;
-            int amount = e.getWheelRotation() * unitIncrement;
-            setValue(value - amount); });
         addKeyListener(new KeyAdapter() {
             @Override public void keyPressed(KeyEvent e) {
                 if (!enabled) return;

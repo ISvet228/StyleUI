@@ -39,7 +39,7 @@ public class StyledLabel extends AnimatedComponent {
         if (themed) setPreferredSize(new Dimension(180, 36));
         reflectionTask = () -> {
             if (reflectionEnabled && style == Style.GLASS) {
-                reflectionPhase = (reflectionPhase + 0.0035) % 1.0;
+                reflectionPhase = AnimationManager.getGlassPhase();
                 repaint();
             }
         };

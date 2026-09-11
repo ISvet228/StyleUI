@@ -25,7 +25,7 @@ public abstract class AnimatedComponent extends JComponent {
             animation += (target - animation) * 0.22;
             if (Math.abs(animation - target) < 0.003) animation = target;
             boolean glass = getStyle() == Style.GLASS;
-            if (glass) reflectionPhase = (reflectionPhase + 0.0035) % 1.0;
+            reflectionPhase = AnimationManager.getGlassPhase();
             if (old != animation || glass) repaint();
         };
     }
@@ -94,8 +94,7 @@ public abstract class AnimatedComponent extends JComponent {
         Graphics2D gc = (Graphics2D)g2d.create();
         gc.clip(new RoundRectangle2D.Float(0, 0, w, h, arc, arc));
         float band = Math.max(w, h) * 0.5f;
-        float span = w + h + band * 2;
-        float start = (float)(phase * span) - band - h;
+        float start = -band + (float)phase * (w + band * 2f);
         Point2D p1 = new Point2D.Float(start, 0);
         Point2D p2 = new Point2D.Float(start + band, h);
         float[] fractions = {0f, 0.5f, 1f};

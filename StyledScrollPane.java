@@ -43,7 +43,7 @@ public class StyledScrollPane extends JScrollPane {
 
         reflectionTask = () -> {
             if (this.style != Style.GLASS) return;
-            reflectionPhase = (reflectionPhase + 0.0035) % 1.0;
+            reflectionPhase = AnimationManager.getGlassPhase();
             repaint();
         };
     }

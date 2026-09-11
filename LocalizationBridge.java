@@ -12,7 +12,7 @@ final class LocalizationBridge {
         boolean available;
         Method bind = null, bindFormat = null, unbind = null, externalTextChanged = null, localized = null, addListener = null, removeListener = null;
         try {
-            Class<?> cls = Class.forName("Helpers.NSLocalizableString");
+            Class<?> cls = Class.forName("Helpers.NSLocalizedString");
             bind = cls.getMethod("bind", Object.class, String.class, Consumer.class);
             bindFormat = cls.getMethod("bindFormat", Object.class, String.class, Supplier.class, Consumer.class);
             unbind = cls.getMethod("unbind", Object.class);
