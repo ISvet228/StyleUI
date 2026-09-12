@@ -59,8 +59,6 @@ public class StyledSlider extends AnimatedComponent {
             @Override public void keyPressed(KeyEvent e) {
                 if (!enabled) return;
                 switch (e.getKeyCode()) {
-                    case KeyEvent.VK_LEFT, KeyEvent.VK_DOWN -> setValue(value - unitIncrement);
-                    case KeyEvent.VK_RIGHT, KeyEvent.VK_UP -> setValue(value + unitIncrement);
                     case KeyEvent.VK_PAGE_DOWN -> setValue(value - blockIncrement);
                     case KeyEvent.VK_PAGE_UP -> setValue(value + blockIncrement);
                     case KeyEvent.VK_HOME -> setValue(inverted ? maximum : minimum);
