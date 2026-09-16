@@ -4,7 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.AffineTransform;
-import java.util.ArrayList;
+import java.util.*;
 
 public class Animated3DText extends JComponent {
     public enum AnimationType { NONE, PULSE, ROTATE, PULSE_ROTATE, BOUNCE, FULL }
@@ -13,10 +13,16 @@ public class Animated3DText extends JComponent {
     private int depth = 8;
 
     private String text;
-    private String fontName = "Arial";
+    private String fontName = Font.SANS_SERIF;
     private int fontStyle = Font.BOLD;
     private float baseFontSize = 55f, minFontSize = 1f, maxFontSize = 1000f;
     private Color textColor = Color.WHITE, depthColor = new Color(120, 180, 255, 80);
+
+    private Font cachedComputedFont;
+    private int cachedWidth = Integer.MIN_VALUE, cachedHeight = Integer.MIN_VALUE;
+    private String cachedText, cachedFontName;
+    private int cachedFontStyle;
+    private float cachedBaseFontSize = Float.NaN;
 
     private boolean autoScale = true;
     private double currentScale = 1.0, currentRotation = 0.0, currentOffsetY = 0.0;
@@ -223,8 +229,10 @@ public class Animated3DText extends JComponent {
         g2d.setTransform(old);
         g2d.dispose();
     }
-
     private Font calculateFont(int width, int height) {
+        if (cachedComputedFont != null && width == cachedWidth && height == cachedHeight && Objects.equals(text, cachedText)
+                && Objects.equals(fontName, cachedFontName) && fontStyle == cachedFontStyle && baseFontSize == cachedBaseFontSize) return cachedComputedFont;
+
         float requestedSize = Math.max(1f, baseFontSize);
         Font referenceFont = new Font(fontName, fontStyle, Math.max(1, Math.round(requestedSize)));
 
@@ -232,22 +240,31 @@ public class Animated3DText extends JComponent {
         int textWidth = Math.max(1, fm.stringWidth(text));
         int textHeight = Math.max(1, fm.getHeight());
 
-        if (!autoScale) return referenceFont;
+        Font result;
+        if (!autoScale) result = referenceFont;
+        else {
+            double maxPulse = 1.0 + Math.abs(pulseAmount);
+            double sinRotation = Math.abs(Math.sin(Math.abs(rotationAmount)));
+            double cosRotation = Math.abs(Math.cos(Math.abs(rotationAmount)));
 
-        double maxPulse = 1.0 + Math.abs(pulseAmount);
-        double sinRotation = Math.abs(Math.sin(Math.abs(rotationAmount)));
-        double cosRotation = Math.abs(Math.cos(Math.abs(rotationAmount)));
+            double rotatedWidth = textWidth * cosRotation + textHeight * sinRotation * maxPulse;
+            double rotatedHeight = textWidth * sinRotation + textHeight * cosRotation * maxPulse;
 
-        double rotatedWidth = textWidth * cosRotation + textHeight * sinRotation * maxPulse;
-        double rotatedHeight = textWidth * sinRotation + textHeight * cosRotation * maxPulse;
+            double scale = Math.min(Math.max(1, width - depth * 2 + 12) / Math.max(1.0, rotatedWidth),
+                    Math.max(1, height - depth * 2 + 12 - Math.abs(getHeight() * bounceAmount) * 2.0) / Math.max(1.0, rotatedHeight));
 
-        double scale = Math.min(Math.max(1, width - depth * 2 + 12) / Math.max(1.0, rotatedWidth),
-                Math.max(1, height - depth * 2 + 12 - Math.abs(getHeight() * bounceAmount) * 2.0) / Math.max(1.0, rotatedHeight));
-
-        float finalSize = (float)(requestedSize * scale);
-        finalSize = Math.min(maxFontSize, Math.max(minFontSize, finalSize));
-
-        return new Font(fontName, fontStyle, Math.max(1, Math.round(finalSize)));
+            float finalSize = (float)(requestedSize * scale);
+            finalSize = Math.min(maxFontSize, Math.max(minFontSize, finalSize));
+            result = new Font(fontName, fontStyle, Math.max(1, Math.round(finalSize)));
+        }
+        cachedComputedFont = result;
+        cachedWidth = width;
+        cachedHeight = height;
+        cachedText = text;
+        cachedFontName = fontName;
+        cachedFontStyle = fontStyle;
+        cachedBaseFontSize = baseFontSize;
+        return result;
     }
 
     @Override public Dimension getPreferredSize() {
