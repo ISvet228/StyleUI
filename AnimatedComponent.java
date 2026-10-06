@@ -6,6 +6,7 @@ import java.awt.event.MouseEvent;
 import java.awt.geom.*;
 
 public abstract class AnimatedComponent extends JComponent {
+    //region Variables
     protected double animation, reflectionPhase;
     protected boolean mouseOver, mousePressed;
     private Dimension baseParentSize;
@@ -14,7 +15,9 @@ public abstract class AnimatedComponent extends JComponent {
     private int baseX, baseY, baseWidth, baseHeight;
     private int referenceWidth, referenceHeight;
     private boolean hasReferenceSize, scaling;
+    //endregion
 
+    //region Constructors
     AnimatedComponent() {
         hasReferenceSize = false;
         setOpaque(false);
@@ -36,6 +39,9 @@ public abstract class AnimatedComponent extends JComponent {
         this.referenceHeight = Math.max(1, referenceHeight);
         hasReferenceSize = true;
     }
+    //endregion
+
+    //region Public API
     @Override public void addNotify() {
         super.addNotify();
         AnimationManager.register(animationTask);
@@ -198,4 +204,5 @@ public abstract class AnimatedComponent extends JComponent {
     public int getBaseWidth() { return baseWidth; }
     public int getBaseHeight() { return baseHeight; }
     public Rectangle getBaseBounds() { return new Rectangle(baseX, baseY, baseWidth, baseHeight); }
+    //endregion
 }

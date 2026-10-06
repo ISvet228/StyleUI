@@ -2,11 +2,14 @@ package StyleUI;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.text.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.*;
+import java.util.function.IntPredicate;
 
 public class StyledTextField extends JTextField {
+    //region Variables
     private Style style;
     private double reflectionPhase;
 
@@ -17,7 +20,9 @@ public class StyledTextField extends JTextField {
 
     private final Runnable reflectionTask;
     private boolean localizationReady;
+    //endregion
 
+    //region Constructors
     public StyledTextField(Style style, String text) {
         super(text);
         this.style = style;
@@ -52,17 +57,31 @@ public class StyledTextField extends JTextField {
         this(style, text);
         setReferenceSize(referenceWidth, referenceHeight);
     }
+    //endregion
 
-
+    //region Public API
     @Override public void setText(String text) {
         if (localizationReady) LocalizationBridge.externalTextChanged(this, text, value -> StyledTextField.super.setText(value == null ? "" : value));
         else super.setText(text == null ? "" : text);
     }
 
-    private void applyLocalizedText(String text) {
-        super.setText(text == null ? "" : text);
-        revalidate();
-        repaint();
+    public void limitInput(int maxLength, IntPredicate allowedChar) {
+        ((AbstractDocument) getDocument()).setDocumentFilter(new DocumentFilter() {
+            @Override public void insertString(FilterBypass bypass, int offset, String text, AttributeSet attributes) throws BadLocationException {
+                replace(bypass, offset, 0, text, attributes);
+            }
+            @Override public void replace(FilterBypass bypass, int offset, int length, String text, AttributeSet attributes) throws BadLocationException {
+                StringBuilder accepted = new StringBuilder();
+                int room = maxLength - (bypass.getDocument().getLength() - length);
+                if (text != null) {
+                    for (int i = 0; i < text.length() && accepted.length() < room; i++)
+                        if (allowedChar.test(text.charAt(i))) accepted.append(text.charAt(i));
+                }
+                if (accepted.isEmpty() && length == 0) return;
+                super.replace(bypass, offset, length, accepted.toString(), attributes);
+            }
+        });
+        if (getText().length() > maxLength) super.setText(getText().substring(0, maxLength));
     }
 
     @Override public void addNotify() {
@@ -156,10 +175,6 @@ public class StyledTextField extends JTextField {
         repaint();
     }
 
-    private void updateFont() {
-        setFont(new Font("SansSerif", Font.PLAIN, Math.round(Math.clamp(getHeight() * 0.34f, 9, 40))));
-    }
-
     @Override protected void paintComponent(Graphics g) {
         Graphics2D g2d = (Graphics2D)g.create();
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -186,6 +201,17 @@ public class StyledTextField extends JTextField {
         g2d.dispose();
         super.paintComponent(g);
     }
+    //endregion
 
+    //region Helpers
+    private void applyLocalizedText(String text) {
+        super.setText(text == null ? "" : text);
+        revalidate();
+        repaint();
+    }
 
+    private void updateFont() {
+        setFont(new Font("SansSerif", Font.PLAIN, Math.round(Math.clamp(getHeight() * 0.34f, 9, 40))));
+    }
+    //endregion
 }

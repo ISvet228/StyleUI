@@ -7,7 +7,7 @@ import java.awt.geom.AffineTransform;
 import java.util.*;
 
 public class Animated3DText extends JComponent {
-    public enum AnimationType { NONE, PULSE, ROTATE, PULSE_ROTATE, BOUNCE, FULL }
+    //region Variables
     private AnimationType animationType = AnimationType.PULSE_ROTATE;
     private double animationSpeed = 1.0, time = 0.0, pulseAmount = 0.06, rotationAmount = 0.05, bounceAmount = 0.04;
     private int depth = 8;
@@ -36,7 +36,9 @@ public class Animated3DText extends JComponent {
 
     private final Runnable animationTask;
     private final java.util.List<ActionListener> actionListeners = new ArrayList<>();
+    //endregion
 
+    //region Constructors
     public Animated3DText(String text) {
         this.text = text == null ? "" : text;
         hasReferenceSize = false;
@@ -60,65 +62,15 @@ public class Animated3DText extends JComponent {
         this(text, animationType);
         setReferenceSize(referenceWidth, referenceHeight);
     }
+    //endregion
 
-    private void applyLocalizedText(String localizedText) {
-        if (localizedText != null) {
-            this.text = localizedText;
-            repaint();
-        }
-    }
+    //region Public API
     public void setLocalizationKey(String key) {
         LocalizationBridge.unbind(this);
         this.text = key == null ? "" : key;
         LocalizationBridge.bind(this, this.text, this::applyLocalizedText);
         repaint();
     }
-
-    private void updateAnimation() {
-        if (animationType == AnimationType.NONE || animationSpeed <= 0) {
-            targetScale = 1.0;
-            targetRotation = 0.0;
-            targetOffsetY = 0.0;
-        } else {
-            double t = time;
-            switch (animationType) {
-                case PULSE:
-                    targetScale = 1.0 + Math.sin(t) * pulseAmount;
-                    targetRotation = 0.0;
-                    targetOffsetY = 0.0;
-                    break;
-                case ROTATE:
-                    targetScale = 1.0;
-                    targetRotation = Math.sin(t * 0.7) * rotationAmount;
-                    targetOffsetY = 0.0;
-                    break;
-                case PULSE_ROTATE:
-                    targetScale = 1.0 + Math.sin(t) * pulseAmount;
-                    targetRotation = Math.sin(t * 0.7) * rotationAmount;
-                    targetOffsetY = 0.0;
-                    break;
-                case BOUNCE:
-                    targetScale = 1.0;
-                    targetRotation = 0.0;
-                    targetOffsetY = Math.sin(t * 1.5) * getHeight() * bounceAmount;
-                    break;
-                case FULL:
-                    targetScale = 1.0 + Math.sin(t) * pulseAmount;
-                    targetRotation = Math.sin(t * 0.7) * rotationAmount;
-                    targetOffsetY = Math.sin(t * 1.5) * getHeight() * bounceAmount;
-                    break;
-                case NONE: break;
-            }
-            time += 0.05 * animationSpeed;
-        }
-
-        currentScale = lerp(currentScale, targetScale, interpolation);
-        currentRotation = lerp(currentRotation, targetRotation, interpolation);
-        currentOffsetY = lerp(currentOffsetY, targetOffsetY, interpolation);
-        repaint();
-    }
-
-    private double lerp(double current, double target, double amount) { return current + (target - current) * amount; }
     @Override public void addNotify() {
         super.addNotify();
         if (animationSpeed > 0) AnimationManager.register(animationTask);
@@ -228,43 +180,6 @@ public class Animated3DText extends JComponent {
         g2d.drawString(text, x, y);
         g2d.setTransform(old);
         g2d.dispose();
-    }
-    private Font calculateFont(int width, int height) {
-        if (cachedComputedFont != null && width == cachedWidth && height == cachedHeight && Objects.equals(text, cachedText)
-                && Objects.equals(fontName, cachedFontName) && fontStyle == cachedFontStyle && baseFontSize == cachedBaseFontSize) return cachedComputedFont;
-
-        float requestedSize = Math.max(1f, baseFontSize);
-        Font referenceFont = new Font(fontName, fontStyle, Math.max(1, Math.round(requestedSize)));
-
-        FontMetrics fm = getFontMetrics(referenceFont);
-        int textWidth = Math.max(1, fm.stringWidth(text));
-        int textHeight = Math.max(1, fm.getHeight());
-
-        Font result;
-        if (!autoScale) result = referenceFont;
-        else {
-            double maxPulse = 1.0 + Math.abs(pulseAmount);
-            double sinRotation = Math.abs(Math.sin(Math.abs(rotationAmount)));
-            double cosRotation = Math.abs(Math.cos(Math.abs(rotationAmount)));
-
-            double rotatedWidth = textWidth * cosRotation + textHeight * sinRotation * maxPulse;
-            double rotatedHeight = textWidth * sinRotation + textHeight * cosRotation * maxPulse;
-
-            double scale = Math.min(Math.max(1, width - depth * 2 + 12) / Math.max(1.0, rotatedWidth),
-                    Math.max(1, height - depth * 2 + 12 - Math.abs(getHeight() * bounceAmount) * 2.0) / Math.max(1.0, rotatedHeight));
-
-            float finalSize = (float)(requestedSize * scale);
-            finalSize = Math.min(maxFontSize, Math.max(minFontSize, finalSize));
-            result = new Font(fontName, fontStyle, Math.max(1, Math.round(finalSize)));
-        }
-        cachedComputedFont = result;
-        cachedWidth = width;
-        cachedHeight = height;
-        cachedText = text;
-        cachedFontName = fontName;
-        cachedFontStyle = fontStyle;
-        cachedBaseFontSize = baseFontSize;
-        return result;
     }
 
     @Override public Dimension getPreferredSize() {
@@ -391,9 +306,106 @@ public class Animated3DText extends JComponent {
 
     public void addActionListener(ActionListener listener) { if (listener != null && !actionListeners.contains(listener)) actionListeners.add(listener); }
     public void removeActionListener(ActionListener listener) { actionListeners.remove(listener); }
+    //endregion
+
+    //region Helpers
+    private void applyLocalizedText(String localizedText) {
+        if (localizedText != null) {
+            this.text = localizedText;
+            repaint();
+        }
+    }
+
+    private void updateAnimation() {
+        if (animationType == AnimationType.NONE || animationSpeed <= 0) {
+            targetScale = 1.0;
+            targetRotation = 0.0;
+            targetOffsetY = 0.0;
+        } else {
+            double t = time;
+            switch (animationType) {
+                case PULSE:
+                    targetScale = 1.0 + Math.sin(t) * pulseAmount;
+                    targetRotation = 0.0;
+                    targetOffsetY = 0.0;
+                    break;
+                case ROTATE:
+                    targetScale = 1.0;
+                    targetRotation = Math.sin(t * 0.7) * rotationAmount;
+                    targetOffsetY = 0.0;
+                    break;
+                case PULSE_ROTATE:
+                    targetScale = 1.0 + Math.sin(t) * pulseAmount;
+                    targetRotation = Math.sin(t * 0.7) * rotationAmount;
+                    targetOffsetY = 0.0;
+                    break;
+                case BOUNCE:
+                    targetScale = 1.0;
+                    targetRotation = 0.0;
+                    targetOffsetY = Math.sin(t * 1.5) * getHeight() * bounceAmount;
+                    break;
+                case FULL:
+                    targetScale = 1.0 + Math.sin(t) * pulseAmount;
+                    targetRotation = Math.sin(t * 0.7) * rotationAmount;
+                    targetOffsetY = Math.sin(t * 1.5) * getHeight() * bounceAmount;
+                    break;
+                case NONE: break;
+            }
+            time += 0.05 * animationSpeed;
+        }
+
+        currentScale = lerp(currentScale, targetScale, interpolation);
+        currentRotation = lerp(currentRotation, targetRotation, interpolation);
+        currentOffsetY = lerp(currentOffsetY, targetOffsetY, interpolation);
+        repaint();
+    }
+
+    private double lerp(double current, double target, double amount) { return current + (target - current) * amount; }
+    private Font calculateFont(int width, int height) {
+        if (cachedComputedFont != null && width == cachedWidth && height == cachedHeight && Objects.equals(text, cachedText)
+                && Objects.equals(fontName, cachedFontName) && fontStyle == cachedFontStyle && baseFontSize == cachedBaseFontSize) return cachedComputedFont;
+
+        float requestedSize = Math.max(1f, baseFontSize);
+        Font referenceFont = new Font(fontName, fontStyle, Math.max(1, Math.round(requestedSize)));
+
+        FontMetrics fm = getFontMetrics(referenceFont);
+        int textWidth = Math.max(1, fm.stringWidth(text));
+        int textHeight = Math.max(1, fm.getHeight());
+
+        Font result;
+        if (!autoScale) result = referenceFont;
+        else {
+            double maxPulse = 1.0 + Math.abs(pulseAmount);
+            double sinRotation = Math.abs(Math.sin(Math.abs(rotationAmount)));
+            double cosRotation = Math.abs(Math.cos(Math.abs(rotationAmount)));
+
+            double rotatedWidth = textWidth * cosRotation + textHeight * sinRotation * maxPulse;
+            double rotatedHeight = textWidth * sinRotation + textHeight * cosRotation * maxPulse;
+
+            double scale = Math.min(Math.max(1, width - depth * 2 + 12) / Math.max(1.0, rotatedWidth),
+                    Math.max(1, height - depth * 2 + 12 - Math.abs(getHeight() * bounceAmount) * 2.0) / Math.max(1.0, rotatedHeight));
+
+            float finalSize = (float)(requestedSize * scale);
+            finalSize = Math.min(maxFontSize, Math.max(minFontSize, finalSize));
+            result = new Font(fontName, fontStyle, Math.max(1, Math.round(finalSize)));
+        }
+        cachedComputedFont = result;
+        cachedWidth = width;
+        cachedHeight = height;
+        cachedText = text;
+        cachedFontName = fontName;
+        cachedFontStyle = fontStyle;
+        cachedBaseFontSize = baseFontSize;
+        return result;
+    }
 
     private void fireActionPerformed() {
         ActionEvent event = new ActionEvent(this, ActionEvent.ACTION_PERFORMED, text);
         for (ActionListener listener : new ArrayList<>(actionListeners)) listener.actionPerformed(event);
     }
+    //endregion
+
+    //region Nested Types
+    public enum AnimationType { NONE, PULSE, ROTATE, PULSE_ROTATE, BOUNCE, FULL }
+    //endregion
 }

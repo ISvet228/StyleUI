@@ -6,12 +6,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
-public  class StyledToggle extends AnimatedComponent {
+public class StyledToggle extends AnimatedComponent {
+    //region Variables
     private Style style;
     private String text;
     private boolean selected;
     private final List<ActionListener> listeners = new ArrayList<>();
+    //endregion
 
+    //region Constructors
     public StyledToggle(Style style, String text) {
         super();
         this.style = style;
@@ -30,6 +33,9 @@ public  class StyledToggle extends AnimatedComponent {
         this(style, text);
         setReferenceSize(referenceWidth, referenceHeight);
     }
+    //endregion
+
+    //region Public API
     protected Style getStyle() { return style; }
     public void setStyle(Style style) {
         if (style == null || style == this.style) return;
@@ -40,7 +46,6 @@ public  class StyledToggle extends AnimatedComponent {
     public void setText(String text) { LocalizationBridge.externalTextChanged(this, text, this::applyLocalizedText); }
     public void setLocalizationKey(String key) { LocalizationBridge.unbind(this); LocalizationBridge.bind(this, key, this::applyLocalizedText); }
     public void setLocalizationFormat(String key, Supplier<Object[]> arguments) { LocalizationBridge.unbind(this); LocalizationBridge.bindFormat(this, key, arguments, this::applyLocalizedText); }
-    private void applyLocalizedText(String text) { this.text = text == null ? "" : text; revalidate(); repaint(); }
     public boolean isSelected() { return selected; }
     public void setSelected(boolean selected) {
         if (this.selected == selected) return;
@@ -49,10 +54,6 @@ public  class StyledToggle extends AnimatedComponent {
     }
     public void addActionListener(ActionListener listener) { if (listener != null) listeners.add(listener); }
     public void removeActionListener(ActionListener listener) { listeners.remove(listener); }
-    private void fireActionEvent() {
-        ActionEvent event = new ActionEvent(this, ActionEvent.ACTION_PERFORMED, text);
-        for (ActionListener listener : new ArrayList<>(listeners)) listener.actionPerformed(event);
-    }
     @Override protected void paintComponent(Graphics g) {
         Graphics2D g2d = graphics(g);
         int h = getHeight();
@@ -78,4 +79,13 @@ public  class StyledToggle extends AnimatedComponent {
         g2d.drawString(text, size * 2 + scaled(9), y + (size + fm.getAscent() - fm.getDescent()) / 2);
         g2d.dispose();
     }
+    //endregion
+
+    //region Helpers
+    private void applyLocalizedText(String text) { this.text = text == null ? "" : text; revalidate(); repaint(); }
+    private void fireActionEvent() {
+        ActionEvent event = new ActionEvent(this, ActionEvent.ACTION_PERFORMED, text);
+        for (ActionListener listener : new ArrayList<>(listeners)) listener.actionPerformed(event);
+    }
+    //endregion
 }

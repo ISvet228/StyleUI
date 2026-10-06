@@ -4,6 +4,7 @@ import java.awt.*;
 import java.util.function.Supplier;
 
 public class StyledLabel extends AnimatedComponent {
+    //region Variables
     private Style style;
     private String text;
     private boolean borderVisible = true;
@@ -12,7 +13,9 @@ public class StyledLabel extends AnimatedComponent {
     private boolean reflectionEnabled = true;
     private boolean themed = true;
     private final Runnable reflectionTask;
+    //endregion
 
+    //region Constructors
     public StyledLabel(Style style, String text) { this(style, text, true, true); }
     public StyledLabel(Style style, String text, boolean borderVisible) { this(style, text, true, borderVisible); }
     public StyledLabel(Style style, String text, int referenceWidth, int referenceHeight) {
@@ -45,6 +48,9 @@ public class StyledLabel extends AnimatedComponent {
         };
         if (themed && style == Style.GLASS && isDisplayable()) AnimationManager.register(reflectionTask);
     }
+    //endregion
+
+    //region Public API
     public void setStyle(Style style) {
         if (style == null || style == this.style) return;
         this.style = style;
@@ -62,11 +68,6 @@ public class StyledLabel extends AnimatedComponent {
     public void setLocalizationFormat(String key, Supplier<Object[]> arguments) {
         LocalizationBridge.unbind(this);
         LocalizationBridge.bindFormat(this, key, arguments, this::applyLocalizedText);
-    }
-    private void applyLocalizedText(String text) {
-        this.text = text == null ? "" : text;
-        if (!themed) revalidate();
-        repaint();
     }
     public boolean isBorderVisible() { return borderVisible; }
     public boolean hasBorder() { return borderVisible; }
@@ -121,4 +122,13 @@ public class StyledLabel extends AnimatedComponent {
         super.removeNotify();
     }
     protected Style getStyle() { return style; }
+    //endregion
+
+    //region Helpers
+    private void applyLocalizedText(String text) {
+        this.text = text == null ? "" : text;
+        if (!themed) revalidate();
+        repaint();
+    }
+    //endregion
 }

@@ -7,9 +7,13 @@ import java.util.List;
 import java.util.function.Supplier;
 
 public class StyledButton extends AnimatedComponent {
+    //region Variables
     private Style style;
     private String text;
     private final List<ActionListener> listeners = new ArrayList<>();
+    //endregion
+
+    //region Constructors
     public StyledButton(Style style, String text) {
         super();
         this.style = style;
@@ -23,16 +27,18 @@ public class StyledButton extends AnimatedComponent {
                 ActionEvent event = new ActionEvent(StyledButton.this, ActionEvent.ACTION_PERFORMED, text);
                 for (ActionListener listener : listeners) listener.actionPerformed(event); }});
     }
+    public StyledButton(Style style, String text, int referenceWidth, int referenceHeight) {
+        this(style, text);
+        setReferenceSize(referenceWidth, referenceHeight);
+    }
+    //endregion
+
+    //region Public API
     public void addActionListener(ActionListener listener) { if (listener != null) listeners.add(listener); }
     public String getText() { return text; }
     public void setText(String text) { LocalizationBridge.externalTextChanged(this, text, this::applyLocalizedText); }
     public void setLocalizationKey(String key) { LocalizationBridge.unbind(this); LocalizationBridge.bind(this, key, this::applyLocalizedText); }
     public void setLocalizationFormat(String key, Supplier<Object[]> arguments) { LocalizationBridge.unbind(this); LocalizationBridge.bindFormat(this, key, arguments, this::applyLocalizedText); }
-    private void applyLocalizedText(String text) { this.text = text == null ? "" : text; revalidate(); repaint(); }
-    public StyledButton(Style style, String text, int referenceWidth, int referenceHeight) {
-        this(style, text);
-        setReferenceSize(referenceWidth, referenceHeight);
-    }
     protected Style getStyle() { return style; }
     public void setStyle(Style style) {
         if (style == null || style == this.style) return;
@@ -67,4 +73,9 @@ public class StyledButton extends AnimatedComponent {
         drawCenteredText(g2d, text, style.text, Math.max(9f, h * 0.34f), x, y, bw, bh);
         g2d.dispose();
     }
+    //endregion
+
+    //region Helpers
+    private void applyLocalizedText(String text) { this.text = text == null ? "" : text; revalidate(); repaint(); }
+    //endregion
 }

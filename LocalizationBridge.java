@@ -4,9 +4,9 @@ import java.lang.reflect.Method;
 import java.util.function.*;
 
 final class LocalizationBridge {
+    //region Variables
     private static final boolean AVAILABLE;
     private static final Method BIND, BIND_FORMAT, UNBIND, EXTERNAL_TEXT_CHANGED, LOCALIZED, ADD_LISTENER,  REMOVE_LISTENER;
-    private LocalizationBridge() {}
 
     static {
         boolean available;
@@ -31,6 +31,13 @@ final class LocalizationBridge {
         ADD_LISTENER = addListener;
         REMOVE_LISTENER = removeListener;
     }
+    //endregion
+
+    //region Constructors
+    private LocalizationBridge() {}
+    //endregion
+
+    //region Public API
     static boolean isAvailable() { return AVAILABLE; }
 
     static void bind(Object owner, String key, Consumer<String> setter) {
@@ -67,6 +74,9 @@ final class LocalizationBridge {
         if (!AVAILABLE) return;
         try { REMOVE_LISTENER.invoke(null, listener); } catch (ReflectiveOperationException ignored) {}
     }
+    //endregion
+
+    //region Helpers
     private static void applyPlain(Consumer<String> setter, String value) {
         if (setter != null) setter.accept(value == null ? "" : value);
     }
@@ -75,4 +85,5 @@ final class LocalizationBridge {
         try { setter.accept(String.format(key, arguments != null ? arguments.get() : new Object[0])); }
         catch (RuntimeException e) { setter.accept(key == null ? "" : key); }
     }
+    //endregion
 }

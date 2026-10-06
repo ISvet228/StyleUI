@@ -5,6 +5,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 final class AnimationManager {
+    //region Variables
     private static final Set<Runnable> tasks = new LinkedHashSet<>();
     private static final Timer timer = new Timer(16, e -> tick());
     private static long lastTickNanos = System.nanoTime();
@@ -14,7 +15,9 @@ final class AnimationManager {
         timer.setCoalesce(true);
         timer.setRepeats(true);
     }
+    //endregion
 
+    //region Public API
     static void register(Runnable task) {
         if (task == null) return;
         tasks.add(task);
@@ -31,7 +34,9 @@ final class AnimationManager {
     }
 
     static double getGlassPhase() { return glassPhase; }
+    //endregion
 
+    //region Helpers
     private static void tick() {
         if (tasks.isEmpty()) {
             timer.stop();
@@ -47,4 +52,5 @@ final class AnimationManager {
 
         for (Runnable task : tasks.toArray(Runnable[]::new)) task.run();
     }
+    //endregion
 }

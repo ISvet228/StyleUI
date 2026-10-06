@@ -1,14 +1,13 @@
 package StyleUI;
 
 import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
+import javax.swing.event.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.util.ArrayList;
-import java.util.Hashtable;
+import java.util.*;
 
 public class StyledSlider extends AnimatedComponent {
+    //region Variables
     private Style style;
     private int minimum = 0, maximum = 100;
     private int value = 55, extent = 0;
@@ -27,7 +26,9 @@ public class StyledSlider extends AnimatedComponent {
     private Color filledTrackColor, thumbColor, tickColor;
     private Hashtable<Integer, JLabel> labelTable;
     private final java.util.List<ChangeListener> listeners = new ArrayList<>();
+    //endregion
 
+    //region Constructors
     public StyledSlider(Style style, int minimum, int maximum, int value) {
         super();
         this.style = style;
@@ -71,6 +72,9 @@ public class StyledSlider extends AnimatedComponent {
         this(style, minimum, maximum,  value);
         setReferenceSize(referenceWidth, referenceHeight);
     }
+    //endregion
+
+    //region Public API
     protected Style getStyle() { return style; }
     public void setStyle(Style style) {
         if (style == null || style == this.style) return;
@@ -99,17 +103,6 @@ public class StyledSlider extends AnimatedComponent {
     }
     public int getValue() { return value; }
     public void setValue(int value) { setValueInternal(value, false); }
-    private void setValueInternal(int value, boolean fromDrag) {
-        int usableMaximum = Math.max(minimum, maximum - extent);
-        int newValue = Math.clamp(value, minimum, usableMaximum);
-        if (snapToTicks) newValue = snapValue(newValue);
-        newValue = Math.clamp(newValue, minimum, usableMaximum);
-        if (newValue != this.value) {
-            this.value = newValue;
-            fireChange();
-        }
-        repaint();
-    }
     public int getExtent() { return extent; }
     public void setExtent(int extent) {
         this.extent = Math.clamp(extent, 0, maximum - minimum);
@@ -230,33 +223,6 @@ public class StyledSlider extends AnimatedComponent {
 
     public void addChangeListener(ChangeListener listener) { if (listener != null) listeners.add(listener); }
     public void removeChangeListener(ChangeListener listener) { listeners.remove(listener); }
-
-    private void fireChange() {
-        ChangeEvent event = new ChangeEvent(this);
-        for (ChangeListener listener : listeners) listener.stateChanged(event);
-    }
-    private int snapValue(int value) {
-        int spacing = minorTickSpacing > 0 ? minorTickSpacing : majorTickSpacing;
-        if (spacing <= 0) return value;
-        int a = ((value - minimum) / spacing) * spacing + minimum;
-        int b = Math.min(maximum - extent, a + spacing);
-        return Math.abs(value - a) <= Math.abs(value - b) ? a : b;
-    }
-    private void updateValue(int mouseX, int mouseY) {
-        int pad = Math.max(scaled(trackPadding), scaled(4));
-        double t = Math.clamp((orientation == SwingConstants.HORIZONTAL ? mouseX - pad : mouseY - pad) /
-                Math.max(1, orientation == SwingConstants.HORIZONTAL ? getWidth() : getHeight() - pad * 2.0), 0, 1);
-        if (orientation == SwingConstants.VERTICAL) t = 1.0 - t;
-        if (inverted) t = 1.0 - t;
-        setValueInternal(minimum + (int)Math.round(t * (Math.max(minimum, maximum - extent) - minimum)), true);
-    }
-    private int valuePosition(int start, int length) {
-        int usableMaximum = Math.max(minimum, maximum - extent);
-        double t = usableMaximum == minimum ? 0 : (value - minimum) / (double) (usableMaximum - minimum);
-        if (inverted) t = 1.0 - t;
-        if (orientation == SwingConstants.VERTICAL) t = 1.0 - t;
-        return start + (int) Math.round(length * t);
-    }
     @Override protected void paintComponent(Graphics g) {
         Graphics2D g2d = graphics(g);
         int w = getWidth(), h = getHeight();
@@ -313,6 +279,47 @@ public class StyledSlider extends AnimatedComponent {
         if (style == Style.GLASS) paintGlassSheen(g2d, w, h, Math.clamp(Math.min(w, h) * 0.3f, scaled(4), scaled(14)), reflectionPhase);
         g2d.dispose();
     }
+    //endregion
+
+    //region Helpers
+    private void setValueInternal(int value, boolean fromDrag) {
+        int usableMaximum = Math.max(minimum, maximum - extent);
+        int newValue = Math.clamp(value, minimum, usableMaximum);
+        if (snapToTicks) newValue = snapValue(newValue);
+        newValue = Math.clamp(newValue, minimum, usableMaximum);
+        if (newValue != this.value) {
+            this.value = newValue;
+            fireChange();
+        }
+        repaint();
+    }
+
+    private void fireChange() {
+        ChangeEvent event = new ChangeEvent(this);
+        for (ChangeListener listener : listeners) listener.stateChanged(event);
+    }
+    private int snapValue(int value) {
+        int spacing = minorTickSpacing > 0 ? minorTickSpacing : majorTickSpacing;
+        if (spacing <= 0) return value;
+        int a = ((value - minimum) / spacing) * spacing + minimum;
+        int b = Math.min(maximum - extent, a + spacing);
+        return Math.abs(value - a) <= Math.abs(value - b) ? a : b;
+    }
+    private void updateValue(int mouseX, int mouseY) {
+        int pad = Math.max(scaled(trackPadding), scaled(4));
+        double t = Math.clamp((orientation == SwingConstants.HORIZONTAL ? mouseX - pad : mouseY - pad) /
+                Math.max(1, orientation == SwingConstants.HORIZONTAL ? getWidth() : getHeight() - pad * 2.0), 0, 1);
+        if (orientation == SwingConstants.VERTICAL) t = 1.0 - t;
+        if (inverted) t = 1.0 - t;
+        setValueInternal(minimum + (int)Math.round(t * (Math.max(minimum, maximum - extent) - minimum)), true);
+    }
+    private int valuePosition(int start, int length) {
+        int usableMaximum = Math.max(minimum, maximum - extent);
+        double t = usableMaximum == minimum ? 0 : (value - minimum) / (double) (usableMaximum - minimum);
+        if (inverted) t = 1.0 - t;
+        if (orientation == SwingConstants.VERTICAL) t = 1.0 - t;
+        return start + (int) Math.round(length * t);
+    }
     private void paintHorizontalTicks(Graphics2D g2d, int pad, int length, int y, Color color) {
         if (!paintTicks) return;
         int step = minorTickSpacing > 0 ? minorTickSpacing : majorTickSpacing;
@@ -368,4 +375,5 @@ public class StyledSlider extends AnimatedComponent {
         }
         return Integer.toString(value);
     }
+    //endregion
 }

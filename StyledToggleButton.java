@@ -7,6 +7,7 @@ import java.awt.geom.*;
 import java.util.function.Supplier;
 
 public class StyledToggleButton extends JToggleButton {
+    //region Variables
     private Style style;
     private double animation, reflectionPhase;
     private boolean mouseOver, mousePressed;
@@ -18,7 +19,9 @@ public class StyledToggleButton extends JToggleButton {
     private int referenceWidth, referenceHeight;
     private boolean scaling;
     private boolean referenceScaling;
+    //endregion
 
+    //region Constructors
     public StyledToggleButton(Style style, String text) {
         super(text);
         this.style = style;
@@ -35,7 +38,9 @@ public class StyledToggleButton extends JToggleButton {
         this.referenceScaling = true;
         initialize();
     }
+    //endregion
 
+    //region Public API
     @Override public void setText(String text) {
         LocalizationBridge.externalTextChanged(this, text, value -> StyledToggleButton.super.setText(value == null ? "" : value));
     }
@@ -48,34 +53,6 @@ public class StyledToggleButton extends JToggleButton {
     public void setLocalizationFormat(String key, Supplier<Object[]> arguments) {
         LocalizationBridge.unbind(this);
         LocalizationBridge.bindFormat(this, key, arguments, this::applyLocalizedText);
-    }
-
-    private void applyLocalizedText(String text) {
-        super.setText(text == null ? "" : text);
-        revalidate();
-        repaint();
-    }
-
-    private void initialize() {
-        setOpaque(false);
-        setContentAreaFilled(false);
-        setBorderPainted(false);
-        setFocusPainted(false);
-        setRolloverEnabled(false);
-        setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        setPreferredSize(new Dimension(180, 42));
-
-        enableEvents(AWTEvent.MOUSE_EVENT_MASK | AWTEvent.MOUSE_MOTION_EVENT_MASK);
-
-        animationTask = () -> {
-            double target = mouseOver || mousePressed || isSelected() ? 1.0 : 0.0;
-            double old = animation;
-            animation += (target - animation) * 0.22;
-            if (Math.abs(animation - target) < 0.003) animation = target;
-            boolean glass = style == Style.GLASS;
-            if (glass) reflectionPhase = AnimationManager.getGlassPhase();
-            if (old != animation || glass) repaint();
-        };
     }
 
     @Override public void addNotify() {
@@ -186,8 +163,6 @@ public class StyledToggleButton extends JToggleButton {
         g2d.dispose();
     }
 
-
-
     static void drawCenteredText(Graphics2D g2d, String text, Color color, float size, int x, int y, int w, int h) {
         if (text == null || text.isEmpty()) return;
 
@@ -276,4 +251,35 @@ public class StyledToggleButton extends JToggleButton {
     public int getBaseWidth() { return baseWidth; }
     public int getBaseHeight() { return baseHeight; }
     public Rectangle getBaseBounds() { return new Rectangle(baseX, baseY, baseWidth, baseHeight); }
+    //endregion
+
+    //region Helpers
+    private void applyLocalizedText(String text) {
+        super.setText(text == null ? "" : text);
+        revalidate();
+        repaint();
+    }
+
+    private void initialize() {
+        setOpaque(false);
+        setContentAreaFilled(false);
+        setBorderPainted(false);
+        setFocusPainted(false);
+        setRolloverEnabled(false);
+        setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        setPreferredSize(new Dimension(180, 42));
+
+        enableEvents(AWTEvent.MOUSE_EVENT_MASK | AWTEvent.MOUSE_MOTION_EVENT_MASK);
+
+        animationTask = () -> {
+            double target = mouseOver || mousePressed || isSelected() ? 1.0 : 0.0;
+            double old = animation;
+            animation += (target - animation) * 0.22;
+            if (Math.abs(animation - target) < 0.003) animation = target;
+            boolean glass = style == Style.GLASS;
+            if (glass) reflectionPhase = AnimationManager.getGlassPhase();
+            if (old != animation || glass) repaint();
+        };
+    }
+    //endregion
 }

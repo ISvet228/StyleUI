@@ -10,63 +10,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class StyledComboBox extends AnimatedComponent {
-    public static class ItemStyle {
-        private Color normalColor, hoverColor, selectedColor, textColor, borderColor;
-
-        private int arc = 12;
-        private int horizontalPadding = 9;
-        private int verticalPadding = 4;
-
-        private Font font;
-        private boolean glass;
-        private float glassOpacity = 0.45f, glassRadius = 0.5f;
-
-        public ItemStyle() {
-            normalColor = new Color(45, 47, 50);
-            hoverColor = new Color(61, 63, 66);
-            selectedColor = new Color(72, 99, 151);
-            textColor = Color.WHITE;
-            borderColor = new Color(82, 84, 87);
-            font = new Font("SansSerif", Font.BOLD, 14);
-        }
-
-        public Color getNormalColor() { return normalColor; }
-        public void setNormalColor(Color color) { if (color != null) normalColor = color; }
-
-        public Color getHoverColor() {return hoverColor; }
-        public void setHoverColor(Color color) { if (color != null) hoverColor = color; }
-
-        public Color getSelectedColor() { return selectedColor; }
-        public void setSelectedColor(Color color) { if (color != null) selectedColor = color; }
-
-        public Color getTextColor() { return textColor; }
-        public void setTextColor(Color color) { if (color != null) textColor = color;}
-
-        public Color getBorderColor() { return borderColor; }
-        public void setBorderColor(Color color) { if (color != null) borderColor = color; }
-
-        public int getArc() { return arc; }
-        public void setArc(int arc) { this.arc = Math.max(0, arc);}
-
-        public int getHorizontalPadding() { return horizontalPadding; }
-        public void setHorizontalPadding(int padding) { horizontalPadding = Math.max(0, padding); }
-
-        public int getVerticalPadding() { return verticalPadding; }
-        public void setVerticalPadding(int padding) { verticalPadding = Math.max(0, padding); }
-
-        public Font getFont() { return font; }
-        public void setFont(Font font) { if (font != null) this.font = font; }
-
-        public boolean isGlass() { return glass; }
-        public void setGlass(boolean glass) { this.glass = glass; }
-
-        public float getGlassOpacity() { return glassOpacity; }
-        public void setGlassOpacity(float opacity) { glassOpacity = Math.clamp(opacity, 0f, 1f); }
-
-        public float getGlassRadius() { return glassRadius; }
-        public void setGlassRadius(float radius) { glassRadius = Math.max(0f, radius); }
-    }
-
+    //region Variables
     private Style style;
 
     private final List<Object> items = new ArrayList<>();
@@ -98,12 +42,26 @@ public class StyledComboBox extends AnimatedComponent {
     private JTextField editor;
 
     private JPopupMenu popup;
+    /** The list itself. It is drawn inside the window's layered pane, so a modal or always-on-top dialog cannot hide or block it. */
+    private JPanel popupWrapper;
+    private JLayeredPane layerHost;
+    private JComponent layerContent;
+    private AWTEventListener outsideClickListener;
     private JPanel popupPanel;
     private JScrollPane scrollPane;
 
     private double popupAnimation;
     private Timer popupTimer;
 
+    private final Runnable languageChangeTask = () -> {
+        if (editor != null && selectedIndex >= 0) editor.setText(getSelectedItemString());
+        if (popupVisible) rebuildPopup();
+        revalidate();
+        repaint();
+    };
+    //endregion
+
+    //region Constructors
     public StyledComboBox(Style style, Object[] values) {
         super();
         this.style = style;
@@ -202,6 +160,9 @@ public class StyledComboBox extends AnimatedComponent {
         this(style, values);
         setReferenceSize(referenceWidth, referenceHeight);
     }
+    //endregion
+
+    //region Public API
     @Override public void addNotify() {
         super.addNotify();
         LocalizationBridge.addLanguageChangeListener(languageChangeTask);
@@ -209,13 +170,14 @@ public class StyledComboBox extends AnimatedComponent {
 
     @Override public void removeNotify() {
         LocalizationBridge.removeLanguageChangeListener(languageChangeTask);
+        detachFromLayer();
         super.removeNotify();
     }
 
     @Override public void repaint() {
         super.repaint();
-        if (popup != null && popup.isVisible()) {
-            popup.repaint();
+        if ((popup != null && popup.isVisible()) || layerContent != null) {
+            if (popup != null) popup.repaint();
             if (popupPanel != null) popupPanel.repaint();
             if (scrollPane != null) {
                 scrollPane.repaint();
@@ -365,18 +327,6 @@ public class StyledComboBox extends AnimatedComponent {
         return displayString(value);
     }
 
-    private String displayString(Object value) {
-        if (value == null) return "";
-        return LocalizationBridge.localized(String.valueOf(value));
-    }
-
-    private final Runnable languageChangeTask = () -> {
-        if (editor != null && selectedIndex >= 0) editor.setText(getSelectedItemString());
-        if (popupVisible) rebuildPopup();
-        revalidate();
-        repaint();
-    };
-
     public boolean isEditable() { return editable; }
     public void setEditable(boolean editable) {
         if (this.editable == editable) return;
@@ -388,36 +338,6 @@ public class StyledComboBox extends AnimatedComponent {
         }
         revalidate();
         repaint();
-    }
-
-    private void ensureEditor() {
-        if (editor != null) return;
-        editor = new JTextField(getSelectedItemString());
-        editor.setOpaque(false);
-        editor.setBorder(BorderFactory.createEmptyBorder(0, scaled(horizontalPadding), 0, scaled(2)));
-        editor.setForeground(textColor);
-        editor.setCaretColor(textColor);
-        editor.setFont(scaledFont(font));
-        editor.setEnabled(enabled);
-
-        editor.addActionListener(e -> {
-            String text = editor.getText();
-            for (int i = 0; i < items.size(); i++) {
-                if (displayString(items.get(i)).equals(text)) {
-                    setSelectedIndex(i);
-                    return;
-                }
-            }
-            fireActionEvent();
-        });
-
-        add(editor);
-        updateEditorBounds();
-    }
-    private void updateEditorBounds() {
-        if (editor == null) return;
-        int arrowWidth = Math.max(scaled(28), getHeight());
-        editor.setBounds(scaled(3), scaled(2), Math.max(1, getWidth() - arrowWidth - scaled(6)), Math.max(1, getHeight() - scaled(4)));
     }
 
     public int getMaximumRowCount() { return maximumRowCount; }
@@ -442,7 +362,9 @@ public class StyledComboBox extends AnimatedComponent {
         popup.setBorder(null);
         popup.setBorderPainted(false);
         popup.setLightWeightPopupEnabled(true);
-        popup.setVisible(true);
+        popup.setInvoker(this);
+        if (attachToLayer()) installOutsideClickListener();
+        else popup.setVisible(true);
 
         updatePopupSelection();
         repaint();
@@ -455,6 +377,7 @@ public class StyledComboBox extends AnimatedComponent {
         popupAnimation = 1;
         popupTimer.restart();
 
+        detachFromLayer();
         if (popup != null) popup.setVisible(false);
         repaint();
     }
@@ -463,215 +386,10 @@ public class StyledComboBox extends AnimatedComponent {
         if (popupVisible) hidePopup();
         else showPopup();
     }
-    private Point getPopupLocation() {
-        try {
-            Point point = getLocationOnScreen();
-            return new Point(point.x, point.y + getHeight() + scaled(4));
-        } catch (IllegalComponentStateException e) { return new Point(0, getHeight()); }
-    }
-    private void createPopup() {
-        popup = new JPopupMenu() {
-            @Override public void paint(Graphics g) {
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setComposite(AlphaComposite.Clear);
-                g2d.fillRect(0, 0, getWidth(), getHeight());
-                g2d.dispose();
-                super.paint(g);
-            }
-            @Override public void update(Graphics g) { paint(g); }
-        };
-        popup.setUI(new javax.swing.plaf.basic.BasicPopupMenuUI());
-        popup.setOpaque(false);
-        popup.setBackground(new Color(0, 0, 0, 0));
-        popup.setBorder(null);
-        popup.setBorderPainted(false);
-        popup.setLightWeightPopupEnabled(true);
-        rebuildPopup();
-    }
-
-    private void rebuildPopup() {
-        if (popup == null) return;
-
-        popup.removeAll();
-        popup.setOpaque(false);
-        popup.setBackground(new Color(0, 0, 0, 0));
-        popup.setBorder(null);
-        popup.setBorderPainted(false);
-
-        popupPanel = new JPanel(new BorderLayout()) {
-            @Override protected void paintComponent(Graphics g) {super.paintComponent(g);}
-        };
-        popupPanel.setOpaque(false);
-        popupPanel.setBackground(new Color(0, 0, 0, 0));
-        popupPanel.setLayout(new BoxLayout(popupPanel, BoxLayout.Y_AXIS));
-
-        for (int index = 0; index < items.size(); index++) {
-            popupPanel.add(createPopupItem(index));
-            if (index < items.size() - 1) popupPanel.add(Box.createVerticalStrut(scaled(itemSpacing)));
-        }
-
-        scrollPane = new JScrollPane(popupPanel, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        scrollPane.setOpaque(false);
-        scrollPane.setBackground(new Color(0, 0, 0, 0));
-        scrollPane.setBorder(null);
-        scrollPane.getViewport().setOpaque(false);
-        scrollPane.getViewport().setBackground(new Color(0, 0, 0, 0));
-        scrollPane.getVerticalScrollBar().setOpaque(false);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(scaled(12));
-
-
-        scrollPane.setPreferredSize(new Dimension(Math.max(getWidth(), popup.getWidth()),
-                Math.clamp(items.size(), 1, maximumRowCount) * scaled(itemHeight) + scaled(popupPadding * 2)));
-
-        JPanel wrapper = createPopupBackground();
-        wrapper.setOpaque(false);
-        wrapper.setBackground(new Color(0, 0, 0, 0));
-        wrapper.add(scrollPane, BorderLayout.CENTER);
-
-        popup.add(wrapper);
-        popup.pack();
-        popup.revalidate();
-        popup.repaint();
-    }
-    private JPanel createPopupItem(int index) {
-        return new JPanel(new BorderLayout()) {
-            private boolean over;
-            {
-                setOpaque(false);
-                setBackground(new Color(0, 0, 0, 0));
-
-                int height = scaled(itemHeight);
-                setPreferredSize(new Dimension(Math.max(getWidth(), scaled(100)), height));
-                setMinimumSize(new Dimension(scaled(80), height));
-                setMaximumSize(new Dimension(Integer.MAX_VALUE, height));
-
-                addMouseListener(new MouseAdapter() {
-                    @Override public void mouseEntered(MouseEvent e) { over = true;repaint(); }
-                    @Override public void mouseExited(MouseEvent e) { over = false;repaint(); }
-                    @Override public void mousePressed(MouseEvent e) {
-                        if (!enabled) return;
-                        setSelectedIndex(index);
-                        hidePopup();
-                        requestFocusInWindow();
-                    }});
-            }
-
-            @Override protected void paintComponent(Graphics g) {
-                Graphics2D g2d = graphics(g);
-
-                int w = getWidth(), h = getHeight();
-                if (w <= 0 || h <= 0) {
-                    g2d.dispose();
-                    return;
-                }
-                ItemStyle s = popupStyle;
-                Color fill;
-
-                if (s.isGlass()) {
-                    int alpha;
-
-                    if (index == selectedIndex) alpha = 62;
-                    else if (over) alpha = 48;
-                    else alpha = 28;
-
-                    fill = new Color(255, 255, 255, alpha);
-                } else if (index == selectedIndex) fill = s.getSelectedColor();
-                else if (over) fill = s.getHoverColor();
-                else fill = s.getNormalColor();
-
-                float itemArc = Math.clamp(Math.min(w, h) * 0.22f, scaled(2), scaled(s.getArc()));
-
-                g2d.setColor(fill);
-                g2d.fillRoundRect(0, 0, w, h, Math.round(itemArc), Math.round(itemArc));
-
-                if (s.isGlass()) {
-                    Graphics2D sheen = (Graphics2D) g2d.create();
-                    paintGlassSheen(sheen, w, h, itemArc, reflectionPhase);
-                    sheen.dispose();
-                }
-
-                Color itemBorder = s.getBorderColor();
-
-                if (itemBorder != null && itemBorder.getAlpha() > 0) {
-                    g2d.setColor(itemBorder);
-                    g2d.drawRoundRect(0, 0, w - 1, h - 1, Math.round(itemArc), Math.round(itemArc));
-                }
-
-                g2d.setFont(scaledFont(s.getFont()));
-                g2d.setColor(enabled ? s.getTextColor() : disabledColor());
-
-                FontMetrics fm = g2d.getFontMetrics();
-                g2d.drawString(displayString(items.get(index)), scaled(s.getHorizontalPadding()),  (h - fm.getHeight()) / 2 + fm.getAscent());
-                g2d.dispose();
-            }
-        };
-    }
-    private JPanel createPopupBackground() {
-        return new JPanel(new BorderLayout()) {
-            {
-                setOpaque(false);
-                setBackground(new Color(0, 0, 0, 0));
-                setBorder(BorderFactory.createEmptyBorder(scaled(popupPadding), scaled(popupPadding), scaled(popupPadding), scaled(popupPadding)));
-            }
-
-            @Override protected void paintComponent(Graphics g) {
-                Graphics2D g2d = graphics(g);
-                int w = getWidth(), h = getHeight();
-
-                if (w <= 0 || h <= 0) {
-                    g2d.dispose();
-                    return;
-                }
-                float popupRadius = Math.clamp(Math.min(w, h) * 0.16f, scaled(4), scaled(popupArc));
-                g2d.clip(new RoundRectangle2D.Float(0, 0, w - 1, h - 1, popupRadius, popupRadius));
-
-                if (popupGlass) {
-                    g2d.setColor(new Color(255, 255, 255, safeAlpha(22 + 35 * (float) popupAnimation + 25 * popupGlassOpacity)));
-                    g2d.fillRect(0, 0, w, h);
-                    paintGlassSheen(g2d, w, h, popupRadius, reflectionPhase);
-                } else {
-                    g2d.setColor(popupBackgroundColor);
-                    g2d.fillRect(0, 0, w, h);
-                }
-                g2d.dispose();
-            }
-        };
-    }
-
-    private void changePopupSelection(int amount) {
-        if (items.isEmpty()) return;
-
-        int index = selectedIndex;
-        if (index < 0) index = 0;
-
-        index = Math.clamp(index + amount, 0, items.size() - 1);
-        selectedIndex = index;
-        updatePopupSelection();
-        repaint();
-    }
-    private void updatePopupSelection() {
-        if (popupPanel == null) return;
-
-        Component[] components = popupPanel.getComponents();
-        int itemIndex = 0;
-
-        for (Component component : components) {
-            if (component instanceof JPanel) {
-                component.repaint();
-                if (itemIndex == selectedIndex && scrollPane != null) scrollPane.getViewport().scrollRectToVisible(component.getBounds());
-                itemIndex++;
-            }
-        }
-    }
 
     public void addActionListener(ActionListener listener) { if (listener != null) listeners.add(listener); }
     public void removeActionListener(ActionListener listener) { listeners.remove(listener); }
     public ActionListener[] getActionListeners() { return listeners.toArray(new ActionListener[0]); }
-
-    private void fireActionEvent() {
-        ActionEvent event = new ActionEvent(this, ActionEvent.ACTION_PERFORMED, getSelectedItemString());
-        for (ActionListener listener : new ArrayList<>(listeners)) listener.actionPerformed(event);
-    }
 
     @Override public boolean isEnabled() { return enabled; }
     @Override public void setEnabled(boolean enabled) {
@@ -848,12 +566,6 @@ public class StyledComboBox extends AnimatedComponent {
         popupGlassRadius = Math.max(0f, radius);
         repaint();
     }
-
-    private Font scaledFont(Font source) {
-        if (source == null) source = font;
-        return source.deriveFont(Math.max(1, source.getSize2D() * parentScale()));
-    }
-    private Color disabledColor() { return new Color(textColor.getRed(), textColor.getGreen(), textColor.getBlue(), 90); }
     @Override public void doLayout() {
         super.doLayout();
         updateEditorBounds();
@@ -903,6 +615,305 @@ public class StyledComboBox extends AnimatedComponent {
         paintArrow(g2d, w, h);
         g2d.dispose();
     }
+    //endregion
+
+    //region Helpers
+    private String displayString(Object value) {
+        if (value == null) return "";
+        return LocalizationBridge.localized(String.valueOf(value));
+    }
+
+    private void ensureEditor() {
+        if (editor != null) return;
+        editor = new JTextField(getSelectedItemString());
+        editor.setOpaque(false);
+        editor.setBorder(BorderFactory.createEmptyBorder(0, scaled(horizontalPadding), 0, scaled(2)));
+        editor.setForeground(textColor);
+        editor.setCaretColor(textColor);
+        editor.setFont(scaledFont(font));
+        editor.setEnabled(enabled);
+
+        editor.addActionListener(e -> {
+            String text = editor.getText();
+            for (int i = 0; i < items.size(); i++) {
+                if (displayString(items.get(i)).equals(text)) {
+                    setSelectedIndex(i);
+                    return;
+                }
+            }
+            fireActionEvent();
+        });
+
+        add(editor);
+        updateEditorBounds();
+    }
+    private void updateEditorBounds() {
+        if (editor == null) return;
+        int arrowWidth = Math.max(scaled(28), getHeight());
+        editor.setBounds(scaled(3), scaled(2), Math.max(1, getWidth() - arrowWidth - scaled(6)), Math.max(1, getHeight() - scaled(4)));
+    }
+    private boolean attachToLayer() {
+        JRootPane root = SwingUtilities.getRootPane(this);
+        if (root == null || popupWrapper == null) return false;
+        JLayeredPane host = root.getLayeredPane();
+        if (layerContent != null && layerContent != popupWrapper && layerContent.getParent() == host) host.remove(layerContent);
+
+        popup.remove(popupWrapper);
+        Dimension size = popupWrapper.getPreferredSize();
+        Point below = SwingUtilities.convertPoint(this, 0, getHeight() + scaled(4), host);
+        Point above = SwingUtilities.convertPoint(this, 0, -scaled(4) - size.height, host);
+        int x = Math.clamp(below.x, 0, Math.max(0, host.getWidth() - size.width));
+        int y = below.y;
+        if (y + size.height > host.getHeight() && above.y >= 0) y = above.y;
+        y = Math.clamp(y, 0, Math.max(0, host.getHeight() - size.height));
+
+        popupWrapper.setBounds(x, y, size.width, size.height);
+        host.add(popupWrapper, JLayeredPane.POPUP_LAYER);
+        popupWrapper.doLayout();
+        popupWrapper.validate();
+        host.repaint(popupWrapper.getBounds());
+        layerHost = host;
+        layerContent = popupWrapper;
+        return true;
+    }
+    private void detachFromLayer() {
+        if (outsideClickListener != null) {
+            Toolkit.getDefaultToolkit().removeAWTEventListener(outsideClickListener);
+            outsideClickListener = null;
+        }
+        if (layerContent == null) return;
+        Rectangle bounds = layerContent.getBounds();
+        if (layerHost != null) {
+            layerHost.remove(layerContent);
+            layerHost.repaint(bounds);
+        }
+        layerContent = null;
+        layerHost = null;
+    }
+    private void installOutsideClickListener() {
+        if (outsideClickListener != null) Toolkit.getDefaultToolkit().removeAWTEventListener(outsideClickListener);
+        outsideClickListener = event -> {
+            if (event.getID() != MouseEvent.MOUSE_PRESSED || !(event.getSource() instanceof Component source)) return;
+            if (layerContent == null) return;
+            if (SwingUtilities.isDescendingFrom(source, layerContent) || SwingUtilities.isDescendingFrom(source, this)) return;
+            SwingUtilities.invokeLater(this::hidePopup);
+        };
+        Toolkit.getDefaultToolkit().addAWTEventListener(outsideClickListener, AWTEvent.MOUSE_EVENT_MASK);
+    }
+
+    private Point getPopupLocation() {
+        try {
+            Point point = getLocationOnScreen();
+            return new Point(point.x, point.y + getHeight() + scaled(4));
+        } catch (IllegalComponentStateException e) { return new Point(0, getHeight()); }
+    }
+    private void createPopup() {
+        popup = new JPopupMenu() {
+            @Override public void paint(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setComposite(AlphaComposite.Clear);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+                g2d.dispose();
+                super.paint(g);
+            }
+            @Override public void update(Graphics g) { paint(g); }
+        };
+        popup.setUI(new javax.swing.plaf.basic.BasicPopupMenuUI());
+        popup.setOpaque(false);
+        popup.setBackground(new Color(0, 0, 0, 0));
+        popup.setBorder(null);
+        popup.setBorderPainted(false);
+        popup.setLightWeightPopupEnabled(true);
+        rebuildPopup();
+    }
+
+    private void rebuildPopup() {
+        if (popup == null) return;
+
+        popup.removeAll();
+        popup.setOpaque(false);
+        popup.setBackground(new Color(0, 0, 0, 0));
+        popup.setBorder(null);
+        popup.setBorderPainted(false);
+
+        popupPanel = new JPanel(new BorderLayout()) {
+            @Override protected void paintComponent(Graphics g) {super.paintComponent(g);}
+        };
+        popupPanel.setOpaque(false);
+        popupPanel.setBackground(new Color(0, 0, 0, 0));
+        popupPanel.setLayout(new BoxLayout(popupPanel, BoxLayout.Y_AXIS));
+
+        for (int index = 0; index < items.size(); index++) {
+            popupPanel.add(createPopupItem(index));
+            if (index < items.size() - 1) popupPanel.add(Box.createVerticalStrut(scaled(itemSpacing)));
+        }
+
+        scrollPane = new JScrollPane(popupPanel, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setOpaque(false);
+        scrollPane.setBackground(new Color(0, 0, 0, 0));
+        scrollPane.setBorder(null);
+        scrollPane.getViewport().setOpaque(false);
+        scrollPane.getViewport().setBackground(new Color(0, 0, 0, 0));
+        scrollPane.getVerticalScrollBar().setOpaque(false);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(scaled(12));
+
+
+        scrollPane.setPreferredSize(new Dimension(Math.max(getWidth(), popup.getWidth()),
+                Math.clamp(items.size(), 1, maximumRowCount) * scaled(itemHeight) + scaled(popupPadding * 2)));
+
+        JPanel wrapper = createPopupBackground();
+        wrapper.setOpaque(false);
+        wrapper.setBackground(new Color(0, 0, 0, 0));
+        wrapper.add(scrollPane, BorderLayout.CENTER);
+
+        popup.add(wrapper);
+        popupWrapper = wrapper;
+        popup.pack();
+        popup.revalidate();
+        popup.repaint();
+        if (layerContent != null) attachToLayer();
+    }
+    private JPanel createPopupItem(int index) {
+        return new JPanel(new BorderLayout()) {
+            private boolean over;
+            {
+                setOpaque(false);
+                setBackground(new Color(0, 0, 0, 0));
+
+                int height = scaled(itemHeight);
+                setPreferredSize(new Dimension(Math.max(getWidth(), scaled(100)), height));
+                setMinimumSize(new Dimension(scaled(80), height));
+                setMaximumSize(new Dimension(Integer.MAX_VALUE, height));
+
+                addMouseListener(new MouseAdapter() {
+                    @Override public void mouseEntered(MouseEvent e) { over = true;repaint(); }
+                    @Override public void mouseExited(MouseEvent e) { over = false;repaint(); }
+                    @Override public void mousePressed(MouseEvent e) {
+                        if (!enabled) return;
+                        setSelectedIndex(index);
+                        hidePopup();
+                        requestFocusInWindow();
+                    }});
+            }
+
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2d = graphics(g);
+
+                int w = getWidth(), h = getHeight();
+                if (w <= 0 || h <= 0) {
+                    g2d.dispose();
+                    return;
+                }
+                ItemStyle s = popupStyle;
+                Color fill;
+
+                if (s.isGlass()) {
+                    int alpha;
+
+                    if (index == selectedIndex) alpha = 62;
+                    else if (over) alpha = 48;
+                    else alpha = 28;
+
+                    fill = new Color(255, 255, 255, alpha);
+                } else if (index == selectedIndex) fill = s.getSelectedColor();
+                else if (over) fill = s.getHoverColor();
+                else fill = s.getNormalColor();
+
+                float itemArc = Math.clamp(Math.min(w, h) * 0.22f, scaled(2), scaled(s.getArc()));
+
+                g2d.setColor(fill);
+                g2d.fillRoundRect(0, 0, w, h, Math.round(itemArc), Math.round(itemArc));
+
+                if (s.isGlass()) {
+                    Graphics2D sheen = (Graphics2D) g2d.create();
+                    paintGlassSheen(sheen, w, h, itemArc, reflectionPhase);
+                    sheen.dispose();
+                }
+
+                Color itemBorder = s.getBorderColor();
+
+                if (itemBorder != null && itemBorder.getAlpha() > 0) {
+                    g2d.setColor(itemBorder);
+                    g2d.drawRoundRect(0, 0, w - 1, h - 1, Math.round(itemArc), Math.round(itemArc));
+                }
+
+                g2d.setFont(scaledFont(s.getFont()));
+                g2d.setColor(enabled ? s.getTextColor() : disabledColor());
+
+                FontMetrics fm = g2d.getFontMetrics();
+                g2d.drawString(displayString(items.get(index)), scaled(s.getHorizontalPadding()),  (h - fm.getHeight()) / 2 + fm.getAscent());
+                g2d.dispose();
+            }
+        };
+    }
+    private JPanel createPopupBackground() {
+        return new JPanel(new BorderLayout()) {
+            {
+                setOpaque(false);
+                setBackground(new Color(0, 0, 0, 0));
+                setBorder(BorderFactory.createEmptyBorder(scaled(popupPadding), scaled(popupPadding), scaled(popupPadding), scaled(popupPadding)));
+            }
+
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2d = graphics(g);
+                int w = getWidth(), h = getHeight();
+
+                if (w <= 0 || h <= 0) {
+                    g2d.dispose();
+                    return;
+                }
+                float popupRadius = Math.clamp(Math.min(w, h) * 0.16f, scaled(4), scaled(popupArc));
+                g2d.clip(new RoundRectangle2D.Float(0, 0, w - 1, h - 1, popupRadius, popupRadius));
+
+                if (popupGlass) {
+                    g2d.setColor(new Color(255, 255, 255, safeAlpha(22 + 35 * (float) popupAnimation + 25 * popupGlassOpacity)));
+                    g2d.fillRect(0, 0, w, h);
+                    paintGlassSheen(g2d, w, h, popupRadius, reflectionPhase);
+                } else {
+                    g2d.setColor(popupBackgroundColor);
+                    g2d.fillRect(0, 0, w, h);
+                }
+                g2d.dispose();
+            }
+        };
+    }
+
+    private void changePopupSelection(int amount) {
+        if (items.isEmpty()) return;
+
+        int index = selectedIndex;
+        if (index < 0) index = 0;
+
+        index = Math.clamp(index + amount, 0, items.size() - 1);
+        selectedIndex = index;
+        updatePopupSelection();
+        repaint();
+    }
+    private void updatePopupSelection() {
+        if (popupPanel == null) return;
+
+        Component[] components = popupPanel.getComponents();
+        int itemIndex = 0;
+
+        for (Component component : components) {
+            if (component instanceof JPanel) {
+                component.repaint();
+                if (itemIndex == selectedIndex && scrollPane != null) scrollPane.getViewport().scrollRectToVisible(component.getBounds());
+                itemIndex++;
+            }
+        }
+    }
+
+    private void fireActionEvent() {
+        ActionEvent event = new ActionEvent(this, ActionEvent.ACTION_PERFORMED, getSelectedItemString());
+        for (ActionListener listener : new ArrayList<>(listeners)) listener.actionPerformed(event);
+    }
+
+    private Font scaledFont(Font source) {
+        if (source == null) source = font;
+        return source.deriveFont(Math.max(1, source.getSize2D() * parentScale()));
+    }
+    private Color disabledColor() { return new Color(textColor.getRed(), textColor.getGreen(), textColor.getBlue(), 90); }
     private static int safeAlpha(double value) { return Math.clamp((int) Math.round(value), 0, 255); }
 
     private void paintArrow(Graphics2D g2d, int w, int h) {
@@ -916,4 +927,64 @@ public class StyledComboBox extends AnimatedComponent {
         g2d.setColor(enabled ? arrowColor : disabledColor());
         g2d.fillPolygon(x, y, 3);
     }
+    //endregion
+
+    //region Nested Types
+    public static class ItemStyle {
+        private Color normalColor, hoverColor, selectedColor, textColor, borderColor;
+
+        private int arc = 12;
+        private int horizontalPadding = 9;
+        private int verticalPadding = 4;
+
+        private Font font;
+        private boolean glass;
+        private float glassOpacity = 0.45f, glassRadius = 0.5f;
+
+        public ItemStyle() {
+            normalColor = new Color(45, 47, 50);
+            hoverColor = new Color(61, 63, 66);
+            selectedColor = new Color(72, 99, 151);
+            textColor = Color.WHITE;
+            borderColor = new Color(82, 84, 87);
+            font = new Font("SansSerif", Font.BOLD, 14);
+        }
+
+        public Color getNormalColor() { return normalColor; }
+        public void setNormalColor(Color color) { if (color != null) normalColor = color; }
+
+        public Color getHoverColor() {return hoverColor; }
+        public void setHoverColor(Color color) { if (color != null) hoverColor = color; }
+
+        public Color getSelectedColor() { return selectedColor; }
+        public void setSelectedColor(Color color) { if (color != null) selectedColor = color; }
+
+        public Color getTextColor() { return textColor; }
+        public void setTextColor(Color color) { if (color != null) textColor = color;}
+
+        public Color getBorderColor() { return borderColor; }
+        public void setBorderColor(Color color) { if (color != null) borderColor = color; }
+
+        public int getArc() { return arc; }
+        public void setArc(int arc) { this.arc = Math.max(0, arc);}
+
+        public int getHorizontalPadding() { return horizontalPadding; }
+        public void setHorizontalPadding(int padding) { horizontalPadding = Math.max(0, padding); }
+
+        public int getVerticalPadding() { return verticalPadding; }
+        public void setVerticalPadding(int padding) { verticalPadding = Math.max(0, padding); }
+
+        public Font getFont() { return font; }
+        public void setFont(Font font) { if (font != null) this.font = font; }
+
+        public boolean isGlass() { return glass; }
+        public void setGlass(boolean glass) { this.glass = glass; }
+
+        public float getGlassOpacity() { return glassOpacity; }
+        public void setGlassOpacity(float opacity) { glassOpacity = Math.clamp(opacity, 0f, 1f); }
+
+        public float getGlassRadius() { return glassRadius; }
+        public void setGlassRadius(float radius) { glassRadius = Math.max(0f, radius); }
+    }
+    //endregion
 }

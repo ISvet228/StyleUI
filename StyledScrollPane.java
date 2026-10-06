@@ -7,6 +7,7 @@ import java.awt.event.*;
 import java.awt.geom.RoundRectangle2D;
 
 public class StyledScrollPane extends JScrollPane {
+    //region Variables
     private Style style;
 
     private Color panelColor, borderColor, trackColor, thumbColor, thumbHoverColor;
@@ -21,7 +22,9 @@ public class StyledScrollPane extends JScrollPane {
 
     private double reflectionPhase;
     private final Runnable reflectionTask;
+    //endregion
 
+    //region Constructors
     public StyledScrollPane(Component view, int vsbPolicy, int hsbPolicy, Style style) {
         super(view, vsbPolicy, hsbPolicy);
         this.style = style;
@@ -50,7 +53,9 @@ public class StyledScrollPane extends JScrollPane {
 
     public StyledScrollPane(Component view, Style style) { this(view, VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_AS_NEEDED, style); }
     public StyledScrollPane(Component view) { this(view, VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_AS_NEEDED, Style.FLAT); }
+    //endregion
 
+    //region Public API
     @Override public void addNotify() {
         super.addNotify();
         if (glass) AnimationManager.register(reflectionTask);
@@ -60,45 +65,6 @@ public class StyledScrollPane extends JScrollPane {
         AnimationManager.unregister(reflectionTask);
         stopScrollBarAnimations();
         super.removeNotify();
-    }
-    private void startScrollBarAnimations() {
-        startScrollBarAnimation(getVerticalScrollBar());
-        startScrollBarAnimation(getHorizontalScrollBar());
-    }
-    private void stopScrollBarAnimations() {
-        stopScrollBarAnimation(getVerticalScrollBar());
-        stopScrollBarAnimation(getHorizontalScrollBar());
-    }
-    private void startScrollBarAnimation(JScrollBar bar) {
-        if (bar != null && bar.getUI() instanceof StyledScrollBarUI ui) ui.startAnimation();
-    }
-    private void stopScrollBarAnimation(JScrollBar bar) {
-        if (bar != null && bar.getUI() instanceof StyledScrollBarUI ui) ui.stopAnimation();
-    }
-
-    private void installScrollBar(JScrollBar bar, boolean vertical) {
-        bar.setUI(new StyledScrollBarUI(this));
-        bar.setOpaque(false);
-        bar.setUnitIncrement(16);
-        bar.setPreferredSize(vertical ? new Dimension(thumbThickness + thumbInset * 2, 0) : new Dimension(0, thumbThickness + thumbInset * 2));
-    }
-    private void applyStyleColors(Style style) {
-        if (style == Style.GLASS) {
-            glass = true;
-            panelColor = new Color(255, 255, 255, 22);
-            borderColor = new Color(255, 255, 255, 60);
-            trackColor = new Color(255, 255, 255, 18);
-            thumbColor = new Color(255, 255, 255, 110);
-            thumbHoverColor = new Color(255, 255, 255, 190);
-        }
-        else {
-            glass = false;
-            panelColor = style.panel;
-            borderColor = style.accent;
-            trackColor = style.field;
-            thumbColor = style.accent;
-            thumbHoverColor = style.hover;
-        }
     }
 
     public Style getStyleValue() { return style; }
@@ -176,6 +142,51 @@ public class StyledScrollPane extends JScrollPane {
         g2d.dispose();
         super.paintComponent(g);
     }
+    //endregion
+
+    //region Helpers
+    private void startScrollBarAnimations() {
+        startScrollBarAnimation(getVerticalScrollBar());
+        startScrollBarAnimation(getHorizontalScrollBar());
+    }
+    private void stopScrollBarAnimations() {
+        stopScrollBarAnimation(getVerticalScrollBar());
+        stopScrollBarAnimation(getHorizontalScrollBar());
+    }
+    private void startScrollBarAnimation(JScrollBar bar) {
+        if (bar != null && bar.getUI() instanceof StyledScrollBarUI ui) ui.startAnimation();
+    }
+    private void stopScrollBarAnimation(JScrollBar bar) {
+        if (bar != null && bar.getUI() instanceof StyledScrollBarUI ui) ui.stopAnimation();
+    }
+
+    private void installScrollBar(JScrollBar bar, boolean vertical) {
+        bar.setUI(new StyledScrollBarUI(this));
+        bar.setOpaque(false);
+        bar.setUnitIncrement(16);
+        bar.setPreferredSize(vertical ? new Dimension(thumbThickness + thumbInset * 2, 0) : new Dimension(0, thumbThickness + thumbInset * 2));
+    }
+    private void applyStyleColors(Style style) {
+        if (style == Style.GLASS) {
+            glass = true;
+            panelColor = new Color(255, 255, 255, 22);
+            borderColor = new Color(255, 255, 255, 60);
+            trackColor = new Color(255, 255, 255, 18);
+            thumbColor = new Color(255, 255, 255, 110);
+            thumbHoverColor = new Color(255, 255, 255, 190);
+        }
+        else {
+            glass = false;
+            panelColor = style.panel;
+            borderColor = style.accent;
+            trackColor = style.field;
+            thumbColor = style.accent;
+            thumbHoverColor = style.hover;
+        }
+    }
+    //endregion
+
+    //region Nested Types
     private static class StyledScrollBarUI extends BasicScrollBarUI {
         private final StyledScrollPane pane;
         private boolean thumbHover, thumbPressed;
@@ -264,4 +275,5 @@ public class StyledScrollPane extends JScrollPane {
         }
         @Override protected Dimension getMinimumThumbSize() {return scrollbar.getOrientation() == JScrollBar.VERTICAL ? new Dimension(pane.getThumbThickness(), 24) : new Dimension(24, pane.getThumbThickness());}
     }
+    //endregion
 }
