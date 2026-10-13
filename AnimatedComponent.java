@@ -113,13 +113,25 @@ public abstract class AnimatedComponent extends JComponent {
         gc.dispose();
     }
     static void drawCenteredText(Graphics2D g2d, String text, Color color, float size, int x, int y, int w, int h) {
-        Font font = new Font("SansSerif", Font.BOLD, Math.max(1, Math.round(size)));
+        int pad = Math.max(2, Math.round(Math.min(w, h) * 0.08f));
+        float fit = fitFontSize(g2d, text, size, w - pad * 2, h - pad * 2);
+        Font font = new Font("SansSerif", Font.BOLD, Math.max(1, Math.round(fit)));
         g2d.setFont(font);
         g2d.setColor(color);
         FontMetrics fm = g2d.getFontMetrics(font);
         int ty = y + (h - fm.getHeight()) / 2 + fm.getAscent();
         ty = Math.max(y + fm.getAscent(), Math.min(y + h - Math.max(1, fm.getDescent()), ty));
         g2d.drawString(text, x + (w - fm.stringWidth(text)) / 2, ty);
+    }
+    static float fitFontSize(Graphics2D g2d, String text, float size, int maxW, int maxH) {
+        float s = size;
+        while (s > 1) {
+            Font f = new Font("SansSerif", Font.BOLD, Math.max(1, Math.round(s)));
+            FontMetrics fm = g2d.getFontMetrics(f);
+            if (fm.stringWidth(text) <= maxW && fm.getHeight() <= maxH) break;
+            s -= 1f;
+        }
+        return Math.max(1, s);
     }
     static Color mix(Color a, Color b, float t) {
         t = Math.clamp(t, 0, 1);
