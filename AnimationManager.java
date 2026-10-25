@@ -1,10 +1,10 @@
-package StyleUI;
+package Project.StyleUI;
 
 import javax.swing.*;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-final class AnimationManager {
+public final class AnimationManager {
     //region Variables
     private static final Set<Runnable> tasks = new LinkedHashSet<>();
     private static final Timer timer = new Timer(16, e -> tick());

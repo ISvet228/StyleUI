@@ -1,9 +1,9 @@
-package StyleUI;
+package Project.StyleUI;
 
 import java.lang.reflect.Method;
 import java.util.function.*;
 
-final class LocalizationBridge {
+public final class LocalizationBridge {
     //region Variables
     private static final boolean AVAILABLE;
     private static final Method BIND, BIND_FORMAT, UNBIND, EXTERNAL_TEXT_CHANGED, LOCALIZED, ADD_LISTENER,  REMOVE_LISTENER;
@@ -12,7 +12,7 @@ final class LocalizationBridge {
         boolean available;
         Method bind = null, bindFormat = null, unbind = null, externalTextChanged = null, localized = null, addListener = null, removeListener = null;
         try {
-            Class<?> cls = Class.forName("Helpers.NSLocalizedString");
+            Class<?> cls = Class.forName("Project.Helpers.NSLocalizedString");
             bind = cls.getMethod("bind", Object.class, String.class, Consumer.class);
             bindFormat = cls.getMethod("bindFormat", Object.class, String.class, Supplier.class, Consumer.class);
             unbind = cls.getMethod("unbind", Object.class);

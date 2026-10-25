@@ -529,7 +529,7 @@ Bridge for integration with localization systems.
 - Binding components to localization keys
 - Formatted string support
 - Automatic text updates on language change
-- Works with external Helpers.NSLocalizedString system
+- Works with external Project.Helpers.NSLocalizedString system
 
 **Usage:**
 
@@ -616,7 +616,7 @@ public class StyleUIDemo {
 
 ### 3. Localization Integration
 
-For localization to work, ensure your project has the `Helpers.NSLocalizedString` class with appropriate methods, or implement your own localization system.
+For localization to work, ensure your project has the `Project.Helpers.NSLocalizedString` class with appropriate methods, or implement your own localization system.
 
 ---
 
@@ -626,4 +626,4 @@ For localization to work, ensure your project has the `Helpers.NSLocalizedString
 
 For localization (optional):
 
-- `Helpers.NSLocalizedString` class or similar system
+- `Project.Helpers.NSLocalizedString` class or similar system

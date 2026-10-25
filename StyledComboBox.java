@@ -1,4 +1,4 @@
-package StyleUI;
+package Project.StyleUI;
 
 import javax.swing.*;
 import java.awt.*;
@@ -748,7 +748,7 @@ public class StyledComboBox extends AnimatedComponent {
             if (index < items.size() - 1) popupPanel.add(Box.createVerticalStrut(scaled(itemSpacing)));
         }
 
-        scrollPane = new JScrollPane(popupPanel, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane = new StyledScrollPane(popupPanel, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER, style);
         scrollPane.setOpaque(false);
         scrollPane.setBackground(new Color(0, 0, 0, 0));
         scrollPane.setBorder(null);

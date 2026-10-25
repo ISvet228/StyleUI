@@ -1,4 +1,4 @@
-package StyleUI;
+package Project.StyleUI;
 
 import java.awt.*;
 import java.util.function.Supplier;

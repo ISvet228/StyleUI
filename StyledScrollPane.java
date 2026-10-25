@@ -1,4 +1,4 @@
-package StyleUI;
+package Project.StyleUI;
 
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicScrollBarUI;
