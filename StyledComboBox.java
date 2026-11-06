@@ -112,12 +112,6 @@ public class StyledComboBox extends AnimatedComponent {
                 else showPopup();
             }
         });
-        addMouseWheelListener(e -> {
-            if (!enabled || items.isEmpty()) return;
-            int direction = e.getWheelRotation();
-            if (direction > 0) setSelectedIndex(Math.min(items.size() - 1, selectedIndex + 1));
-            else if (direction < 0) setSelectedIndex(Math.max(0, selectedIndex - 1));
-        });
         addKeyListener(new KeyAdapter() {
             @Override public void keyPressed(KeyEvent e) {
                 if (!enabled) return;
