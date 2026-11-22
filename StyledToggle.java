@@ -23,7 +23,7 @@ public class StyledToggle extends AnimatedComponent {
         setPreferredSize(new Dimension(180, 34));
         setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         addMouseListener(new MouseAdapter() {
-            @Override public void mouseReleased(MouseEvent e) { if (contains(e.getPoint())) {
+            @Override public void mouseReleased(MouseEvent e) { if (isEnabled() && contains(e.getPoint())) {
                 selected = !selected;
                 repaint();
                 fireActionEvent();
@@ -53,6 +53,11 @@ public class StyledToggle extends AnimatedComponent {
         repaint();
     }
     public void addActionListener(ActionListener listener) { if (listener != null) listeners.add(listener); }
+    @Override public void setEnabled(boolean enabled) {
+        super.setEnabled(enabled);
+        setCursor(Cursor.getPredefinedCursor(enabled ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
+        repaint();
+    }
     public void removeActionListener(ActionListener listener) { listeners.remove(listener); }
     @Override protected void paintComponent(Graphics g) {
         Graphics2D g2d = graphics(g);
